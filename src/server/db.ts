@@ -129,6 +129,45 @@ export const MIGRATIONS: Migration[] = [
       CREATE INDEX users_household ON users (household_id);
     `,
   },
+  {
+    id: 4,
+    name: "wishlists, household links",
+    sql: `
+      CREATE TABLE wishlist_items (
+        id TEXT PRIMARY KEY,
+        household_id TEXT NOT NULL,
+        person_id TEXT NOT NULL,
+        seq INTEGER NOT NULL,
+        title TEXT NOT NULL,
+        url TEXT NOT NULL DEFAULT '',
+        price REAL,
+        size TEXT NOT NULL DEFAULT '',
+        notes TEXT NOT NULL DEFAULT '',
+        priority INTEGER NOT NULL DEFAULT 2 CHECK (priority IN (1, 2, 3)),
+        status TEXT NOT NULL DEFAULT 'wanted' CHECK (status IN ('wanted', 'reserved', 'purchased')),
+        claimed_by_user_id TEXT,
+        claimed_by_name TEXT NOT NULL DEFAULT '',
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      );
+      CREATE INDEX wishlist_person ON wishlist_items (person_id);
+      CREATE INDEX wishlist_household ON wishlist_items (household_id);
+      CREATE TABLE household_links (
+        household_id TEXT NOT NULL,
+        other_id TEXT NOT NULL,
+        created_at TEXT NOT NULL,
+        PRIMARY KEY (household_id, other_id)
+      );
+      CREATE TABLE household_invites (
+        code_hash TEXT PRIMARY KEY,
+        household_id TEXT NOT NULL,
+        created_by TEXT NOT NULL,
+        created_at INTEGER NOT NULL,
+        expires_at INTEGER NOT NULL,
+        used_at INTEGER
+      );
+    `,
+  },
 ];
 
 export function dataDir(): string {

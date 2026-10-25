@@ -155,8 +155,8 @@ const MONTH_LETTERS = ["J", "F", "M", "A", "M", "J", "J", "A", "S", "O", "N", "D
 
 export const SEED_PEOPLE: Person[] = [
   { id: "p-avery", name: "Avery Cole", role: "You", circle: "household", relationship: "self", birthday: "1988-03-14" },
-  { id: "p-jordan", name: "Jordan Cole", role: "Partner", circle: "household", relationship: "partner", birthday: "--11-30", anniversary: "2014-06-21", shared: true },
-  { id: "p-noah", name: "Noah Cole", role: "Child", circle: "household", relationship: "son", birthday: "2016-12-02", shared: true },
+  { id: "p-jordan", name: "Jordan Cole", role: "Partner", circle: "household", relationship: "partner", birthday: "--11-30", anniversary: "2014-06-21" },
+  { id: "p-noah", name: "Noah Cole", role: "Child", circle: "household", relationship: "son", birthday: "2016-12-02" },
   { id: "p-june", name: "June Cole", role: "Child", circle: "household", relationship: "daughter" },
   { id: "p-may", name: "May Ellison", role: "Aunt", circle: "outside", relationship: "aunt", birthday: "--12-18" },
   { id: "p-priya", name: "Priya Shah", role: "Friend", circle: "outside", relationship: "friend" },

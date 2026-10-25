@@ -259,6 +259,7 @@ export function removePerson(ctx: Ctx, id: string): Result {
   }
   transaction(ctx.db, () => {
     ctx.db.prepare("UPDATE users SET person_id = NULL WHERE person_id = ?").run(id);
+    ctx.db.prepare("DELETE FROM wishlist_items WHERE person_id = ?").run(id);
     ctx.db.prepare("DELETE FROM people WHERE id = ?").run(id);
   });
   return { ok: true };
@@ -488,14 +489,10 @@ export function replaceLedger(
   const dates = backup.occasionDates ?? {};
   const myPeople = (ctx.db.prepare("SELECT id FROM people WHERE household_id = ?").all(ctx.hid) as { id: string }[]).map((r) => r.id);
   transaction(ctx.db, () => {
-    // Wishlists, budgets and exchange entries that point at people being replaced go with them.
-    for (const table of ["wishlist_items", "budgets"]) {
-      try {
-        ctx.db.prepare(`DELETE FROM ${table} WHERE household_id = ?`).run(ctx.hid);
-      } catch {
-        /* table not created yet in this schema version */
-      }
-    }
+    // Wishlist items (and later budgets) belong to people: keep those whose person is still in the file.
+    const keepIds = people.map((p) => p.id);
+    const marks = keepIds.map(() => "?").join(",") || "''";
+    ctx.db.prepare(`DELETE FROM wishlist_items WHERE household_id = ? AND person_id NOT IN (${marks})`).run(ctx.hid, ...keepIds);
     const keep = new Set(people.map((p) => p.id));
     for (const id of myPeople) if (!keep.has(id)) ctx.db.prepare("UPDATE users SET person_id = NULL WHERE person_id = ?").run(id);
     ctx.db.prepare("DELETE FROM gifts WHERE household_id = ?").run(ctx.hid);
