@@ -1,0 +1,40 @@
+name: Bug report
+description: Something doesn't work the way it should
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: Please don't include passwords, tokens or real family details. For security problems, use the private report on the Security tab instead.
+  - type: input
+    id: version
+    attributes:
+      label: Ribbon version
+      description: Settings → About, or /api/health
+      placeholder: v0.2.0-dev.1 (abc1234)
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened, and what did you expect?
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+  - type: dropdown
+    id: where
+    attributes:
+      label: Where are you running it?
+      options: [Docker (production compose), Docker (dev compose), npm run dev, Something else]
+  - type: input
+    id: browser
+    attributes:
+      label: Device and browser
+      placeholder: iPhone 15, Safari
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs or screenshots
+      render: shell

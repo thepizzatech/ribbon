@@ -48,9 +48,17 @@ esac
   echo "	admin off"
   echo "	http_port $HTTP_PORT"
   echo "	https_port $HTTPS_PORT"
+  # Caddy's own HTTP->HTTPS redirect drops a non-standard port, so spell it out below.
+  [ "$HTTPS_PORT" != "443" ] && echo "	auto_https disable_redirects"
   [ -n "${ACME_EMAIL:-}" ] && echo "	email $ACME_EMAIL"
   echo "}"
   echo
+  if [ "$HTTPS_PORT" != "443" ]; then
+    echo "http://$host:$HTTP_PORT {"
+    echo "	redir https://{host}:$HTTPS_PORT{uri} permanent"
+    echo "}"
+    echo
+  fi
   echo "$SITE_ADDRESS {"
   [ "$TLS_MODE" = "internal" ] && echo "	tls internal"
   echo "	encode zstd gzip"
