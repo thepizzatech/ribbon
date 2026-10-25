@@ -1,7 +1,9 @@
+import { useQuery } from "@tanstack/react-query";
 import { X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Button, Field, Sheet, TextInput } from "@/components/ui";
 import { useOverlay } from "@/components/overlay";
+import { api } from "@/lib/gifts/api";
 import { parseBackup } from "@/lib/gifts/model";
 import { useLedger } from "@/lib/gifts/store";
 
@@ -23,6 +25,7 @@ export function SettingsSheet() {
   const [message, setMessage] = useState("");
   const [confirmClear, setConfirmClear] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+  const session = useQuery({ queryKey: ["session"], queryFn: api.session, refetchOnWindowFocus: false });
 
   useEffect(() => {
     if (!open) return;
@@ -70,8 +73,8 @@ export function SettingsSheet() {
       onOpenChange={(next) => {
         if (!next) close();
       }}
-      title="This device"
-      description="The ledger stays in this browser until you export it."
+      title="Settings"
+      description="The ledger is stored on your Ribbon server. Export a copy any time."
     >
       <div className="flex flex-col gap-5 pb-2">
         <form
@@ -236,6 +239,18 @@ export function SettingsSheet() {
             </Button>
           )}
           {message ? <p className="text-sm text-muted">{message}</p> : null}
+          {session.data?.required ? (
+            <Button
+              type="button"
+              variant="ghost"
+              block
+              onClick={() => {
+                void api.logout().finally(() => window.location.reload());
+              }}
+            >
+              Lock ledger
+            </Button>
+          ) : null}
           <p className="text-sm text-muted">
             Asking a question sends the gift list to the assistant. Nothing is sent until you ask.
           </p>

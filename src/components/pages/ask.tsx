@@ -114,7 +114,7 @@ export function AskPage() {
       ) : null}
 
       <p className="text-sm text-muted">
-        A question sends the gift list to the assistant. Nothing is sent until you ask. The ledger itself stays on this device.
+        A question sends the gift list to the assistant. Nothing is sent until you ask. The ledger itself stays on your server.
       </p>
     </div>
   );

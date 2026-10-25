@@ -130,7 +130,7 @@ function Frame() {
             </span>
             <span className="min-w-0">
               <span className="block truncate text-sm font-medium">{household}</span>
-              <span className="block truncate text-xs text-muted">On this device</span>
+              <span className="block truncate text-xs text-muted">Saved on your server</span>
             </span>
           </div>
         </div>

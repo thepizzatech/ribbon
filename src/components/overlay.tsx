@@ -1,6 +1,5 @@
-import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import { createContext, useContext, useMemo, useState, type ReactNode } from "react";
 import type { Direction } from "@/lib/gifts/model";
-import { useLedger } from "@/lib/gifts/store";
 
 export type Overlay =
   | { type: "none" }
@@ -24,10 +23,6 @@ const OverlayContext = createContext<OverlayApi | null>(null);
 
 export function OverlayProvider({ children }: { children: ReactNode }) {
   const [overlay, setOverlay] = useState<Overlay>({ type: "none" });
-
-  useEffect(() => {
-    void useLedger.persist.rehydrate();
-  }, []);
 
   const api = useMemo<OverlayApi>(
     () => ({
