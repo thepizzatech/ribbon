@@ -35,19 +35,22 @@ export function Switch({
   checked,
   onChange,
   label,
+  id,
 }: {
   checked: boolean;
   onChange: (checked: boolean) => void;
   label: string;
+  id?: string;
 }) {
+  const labelId = `sw-${id ?? label}`;
   return (
     <div className="switch-row">
-      <span id={`sw-${label}`}>{label}</span>
+      <span id={labelId}>{label}</span>
       <button
         type="button"
         role="switch"
         aria-checked={checked}
-        aria-labelledby={`sw-${label}`}
+        aria-labelledby={labelId}
         className="switch"
         onClick={() => onChange(!checked)}
       />

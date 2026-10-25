@@ -151,7 +151,7 @@ export function GiftSheet() {
     const name = newName.trim();
     if (!name || !newTarget) return;
     const id = crypto.randomUUID();
-    addPerson({ id, name: name.slice(0, 80), role: "", circle: "outside" });
+    addPerson({ id, name: name.slice(0, 80), role: "", circle: "outside", relationship: "other" });
     setDraft((current) => ({ ...current, [newTarget === "giver" ? "giverId" : "receiverId"]: id }));
     setNewName("");
     setNewTarget(null);

@@ -1,8 +1,9 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useState, type FormEvent, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { Mark } from "@/components/mark";
-import { Button, Field, TextInput } from "@/components/ui";
-import { ApiError, api, onUnauthorized } from "@/lib/gifts/api";
+import { ImportPrompt, LoginForm, SetupFlow } from "@/components/auth";
+import { Button } from "@/components/ui";
+import { api, onUnauthorized, type Session } from "@/lib/gifts/api";
 import { alreadyHandled, markHandled, readLocalLedger } from "@/lib/gifts/local-import";
 import { useLedger } from "@/lib/gifts/store";
 import { onSettled, pendingChanges } from "@/lib/gifts/sync";
@@ -29,71 +30,29 @@ function Loading({ label = "Opening your ledger…" }: { label?: string }) {
   );
 }
 
-function PasscodeForm({ onDone }: { onDone: () => void }) {
-  const [passcode, setPasscode] = useState("");
-  const [message, setMessage] = useState("");
-  const [busy, setBusy] = useState(false);
-
-  async function submit(event: FormEvent) {
-    event.preventDefault();
-    setBusy(true);
-    setMessage("");
-    try {
-      await api.login(passcode);
-      onDone();
-    } catch (error) {
-      setMessage(error instanceof ApiError ? error.message : "Couldn't sign in.");
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  return (
-    <Centered>
-      <span className="brand-mark">
-        <Mark />
-      </span>
-      <h1 className="display text-3xl text-foreground">Ribbon</h1>
-      <form className="flex w-full max-w-xs flex-col gap-4 text-left" onSubmit={submit}>
-        <Field label="Household passcode">
-          <TextInput
-            type="password"
-            autoFocus
-            autoComplete="current-password"
-            value={passcode}
-            onChange={(event) => setPasscode(event.target.value)}
-          />
-        </Field>
-        {message ? (
-          <p className="text-sm text-muted" role="alert">
-            {message}
-          </p>
-        ) : null}
-        <Button type="submit" block disabled={busy || passcode.length === 0}>
-          Open ledger
-        </Button>
-      </form>
-    </Centered>
-  );
-}
-
-/** Loads the ledger from the server (after the passcode, if one is set) and keeps the store in step with it. */
+/** Signs in (or runs first-time setup), loads the ledger from the server and keeps the store in step with it. */
 export function LedgerGate({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient();
   const ready = useLedger((state) => state.ready);
   const syncError = useLedger((state) => state.syncError);
-  const [migrated, setMigrated] = useState(false);
+  const [importResolved, setImportResolved] = useState(false);
 
   const session = useQuery({ queryKey: SESSION_KEY, queryFn: api.session, refetchOnWindowFocus: false });
-  const unlocked = session.data ? !session.data.required || session.data.authed : false;
+  const signedIn = Boolean(session.data?.authed);
 
   const ledger = useQuery({
     queryKey: LEDGER_KEY,
     queryFn: api.ledger,
-    enabled: unlocked,
+    enabled: signedIn,
   });
 
-  // Any 401 means the passcode session ended: ask again.
+  function accept(next: Session) {
+    queryClient.setQueryData(SESSION_KEY, next);
+    setImportResolved(false);
+    void queryClient.invalidateQueries({ queryKey: LEDGER_KEY });
+  }
+
+  // Any 401 means the session ended: show the sign-in screen again.
   useEffect(() => {
     onUnauthorized(() => {
       void queryClient.invalidateQueries({ queryKey: SESSION_KEY });
@@ -110,41 +69,35 @@ export function LedgerGate({ children }: { children: ReactNode }) {
     return () => onSettled(null);
   }, [queryClient]);
 
-  // One-time: move a ledger that older versions kept in this browser up to the server.
+  // A ledger that older versions kept in this browser is only offered, never pushed up on its own,
+  // and only when the server has no gifts yet (so a freshly set-up family is never overwritten).
+  const [offer, setOffer] = useState<ReturnType<typeof readLocalLedger>>(null);
   const firstLoad = ledger.isSuccess;
-  const serverIsFresh = ledger.data ? ledger.data.demo || ledger.data.people.length === 0 : false;
+  const serverGifts = ledger.data?.gifts.length ?? 0;
   useEffect(() => {
-    if (!firstLoad || migrated) return;
-    let cancelled = false;
-    void (async () => {
-      if (!alreadyHandled()) {
-        const local = readLocalLedger();
-        if (!local) {
-          markHandled("none");
-        } else if (serverIsFresh) {
-          try {
-            const result = await api.importLedger(local);
-            queryClient.setQueryData(LEDGER_KEY, result);
-            markHandled("imported");
-          } catch {
-            // Leave the flag unset so the next visit tries again; the local copy is untouched.
-          }
-        } else {
-          markHandled("skipped"); // the server already holds real data; never overwrite it
-        }
-      }
-      if (!cancelled) setMigrated(true);
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [firstLoad, migrated, serverIsFresh, queryClient]);
+    if (!firstLoad || importResolved) return;
+    if (alreadyHandled()) return setImportResolved(true);
+    const local = readLocalLedger();
+    if (!local) {
+      markHandled("none");
+      return setImportResolved(true);
+    }
+    if (local.demo || local.gifts.length === 0) {
+      markHandled("skipped"); // only the sample household, or nothing worth moving
+      return setImportResolved(true);
+    }
+    if (serverGifts > 0) {
+      markHandled("skipped"); // the server already holds real data; never overwrite it
+      return setImportResolved(true);
+    }
+    setOffer(local);
+  }, [firstLoad, importResolved, serverGifts]);
 
   // Mirror the server's copy into the store, unless local changes are still on their way up.
   useEffect(() => {
-    if (!ledger.data || !migrated || pendingChanges() > 0) return;
+    if (!ledger.data || !importResolved || pendingChanges() > 0) return;
     useLedger.getState().applyServer(ledger.data);
-  }, [ledger.data, migrated]);
+  }, [ledger.data, importResolved]);
 
   if (session.isError) {
     return (
@@ -157,15 +110,8 @@ export function LedgerGate({ children }: { children: ReactNode }) {
     );
   }
   if (!session.data) return <Loading />;
-  if (!unlocked) {
-    return (
-      <PasscodeForm
-        onDone={() => {
-          void queryClient.invalidateQueries({ queryKey: SESSION_KEY });
-        }}
-      />
-    );
-  }
+  if (session.data.setupRequired) return <SetupFlow session={session.data} onDone={accept} />;
+  if (!signedIn) return <LoginForm onDone={accept} />;
   if (ledger.isError && !ready) {
     return (
       <Centered>
@@ -176,7 +122,25 @@ export function LedgerGate({ children }: { children: ReactNode }) {
       </Centered>
     );
   }
-  if (!ready) return <Loading />;
+  if (offer && !importResolved) {
+    return (
+      <ImportPrompt
+        summary={`${offer.gifts.length} gift${offer.gifts.length === 1 ? "" : "s"} and ${offer.people.length} ${offer.people.length === 1 ? "person" : "people"}`}
+        replacing={Boolean(ledger.data?.demo)}
+        onSkip={() => {
+          markHandled("skipped");
+          setImportResolved(true);
+        }}
+        onImport={async () => {
+          const result = await api.importLedger(offer);
+          queryClient.setQueryData(LEDGER_KEY, result);
+          markHandled("imported");
+          setImportResolved(true);
+        }}
+      />
+    );
+  }
+  if (!ready || !importResolved) return <Loading />;
 
   return (
     <>

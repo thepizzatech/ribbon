@@ -12,17 +12,28 @@ export class ApiError extends Error {
 type Listener = () => void;
 let unauthorizedListener: Listener | null = null;
 
-/** The gate registers here so any 401 sends the user back to the passcode screen. */
+/** The gate registers here so any 401 sends the user back to the sign-in screen. */
 export function onUnauthorized(listener: Listener | null) {
   unauthorizedListener = listener;
 }
 
+// The CSRF token for the signed-in session. It arrives with /api/session, /api/login and
+// /api/setup, and goes back on every write as X-CSRF-Token.
+let csrfToken = "";
+export const setCsrfToken = (token: string | null | undefined) => {
+  csrfToken = token ?? "";
+};
+export const getCsrfToken = () => csrfToken;
+
 async function request<T>(method: string, path: string, body?: unknown): Promise<T> {
   let response: Response;
+  const headers: Record<string, string> = {};
+  if (body !== undefined) headers["content-type"] = "application/json";
+  if (method !== "GET" && csrfToken) headers["x-csrf-token"] = csrfToken;
   try {
     response = await fetch(path, {
       method,
-      headers: body === undefined ? undefined : { "content-type": "application/json" },
+      headers,
       body: body === undefined ? undefined : JSON.stringify(body),
       credentials: "same-origin",
     });
@@ -46,13 +57,59 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
 
 const enc = encodeURIComponent;
 
-export type Session = { required: boolean; authed: boolean };
+export type Role = "owner" | "member";
+export type AccountUser = { id: string; username: string; displayName: string; role: Role; createdAt?: string };
+export type Session = {
+  version: string;
+  commit: string | null;
+  setupRequired: boolean;
+  /** A ledger already exists (an upgrade from before accounts): setup only creates the owner login. */
+  hasLedger: boolean;
+  householdName: string | null;
+  setupCodeRequired: boolean;
+  enforceHttps: boolean;
+  sampleData: boolean;
+  authed: boolean;
+  user: AccountUser | null;
+  csrfToken: string | null;
+};
+export type SetupInput = {
+  setupCode?: string;
+  familyName?: string;
+  yourName?: string;
+  people?: { name: string; relationship: string; role?: string; household: boolean }[];
+  username: string;
+  password: string;
+};
 export type ImportPayload = Backup & { demo?: boolean; demoDismissed?: boolean };
 
 export const api = {
-  session: () => request<Session>("GET", "/api/session"),
-  login: (passcode: string) => request<{ ok: true }>("POST", "/api/login", { passcode }),
-  logout: () => request<{ ok: true }>("POST", "/api/logout", {}),
+  session: async () => {
+    const session = await request<Session>("GET", "/api/session");
+    setCsrfToken(session.csrfToken);
+    return session;
+  },
+  setup: async (input: SetupInput) => {
+    const session = await request<Session>("POST", "/api/setup", input);
+    setCsrfToken(session.csrfToken);
+    return session;
+  },
+  login: async (username: string, password: string) => {
+    const session = await request<Session>("POST", "/api/login", { username, password });
+    setCsrfToken(session.csrfToken);
+    return session;
+  },
+  logout: async () => {
+    const result = await request<{ ok: true }>("POST", "/api/logout", {});
+    setCsrfToken(null);
+    return result;
+  },
+  changePassword: (current: string, next: string) =>
+    request<{ ok: true }>("POST", "/api/account/password", { current, next }),
+  users: () => request<{ users: AccountUser[] }>("GET", "/api/users"),
+  addUser: (input: { username: string; password: string; displayName?: string; role: Role }) =>
+    request<{ user: AccountUser }>("POST", "/api/users", input),
+  removeUser: (id: string) => request<{ ok: true }>("DELETE", `/api/users/${enc(id)}`),
   ledger: () => request<Ledger>("GET", "/api/ledger"),
   setHousehold: (patch: { householdName?: string; demo?: boolean; demoDismissed?: boolean }) =>
     request<Ledger>("PUT", "/api/household", patch),

@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import { AccountSection } from "@/components/account";
 import { Button, Field, Sheet, TextInput } from "@/components/ui";
 import { useOverlay } from "@/components/overlay";
 import { api } from "@/lib/gifts/api";
@@ -30,7 +31,11 @@ export function SettingsSheet() {
   const [confirmClear, setConfirmClear] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const theme = useTheme();
-  const session = useQuery({ queryKey: ["session"], queryFn: api.session, refetchOnWindowFocus: false });
+  const session = useQuery({
+    queryKey: ["session"],
+    queryFn: api.session,
+    refetchOnWindowFocus: false,
+  });
 
   useEffect(() => {
     if (!open) return;
@@ -70,20 +75,34 @@ export function SettingsSheet() {
           }}
         >
           <Field label="Household name">
-            <TextInput value={name} maxLength={80} onChange={(event) => setName(event.target.value)} />
+            <TextInput
+              value={name}
+              maxLength={80}
+              onChange={(event) => setName(event.target.value)}
+            />
           </Field>
           <Button type="submit" block>
             Save name
           </Button>
         </form>
 
+        <AccountSection />
+
         <section className="flex flex-col gap-2">
           <p className="lbl">Appearance</p>
           <div className="segment" role="group" aria-label="Theme">
-            <button type="button" className={theme === "light" ? "is-on" : ""} onClick={() => setTheme("light")}>
+            <button
+              type="button"
+              className={theme === "light" ? "is-on" : ""}
+              onClick={() => setTheme("light")}
+            >
               Light
             </button>
-            <button type="button" className={theme === "dark" ? "is-on" : ""} onClick={() => setTheme("dark")}>
+            <button
+              type="button"
+              className={theme === "dark" ? "is-on" : ""}
+              onClick={() => setTheme("dark")}
+            >
               Dark
             </button>
           </div>
@@ -93,7 +112,9 @@ export function SettingsSheet() {
         <section className="flex flex-col gap-2">
           <div>
             <p className="lbl">Occasions</p>
-            <p className="mt-1 text-sm font-normal text-muted">These are the choices when you log a gift.</p>
+            <p className="mt-1 text-sm font-normal text-muted">
+              These are the choices when you log a gift.
+            </p>
           </div>
           <ul className="flex flex-col gap-2">
             {rows.map((row, index) => (
@@ -103,7 +124,11 @@ export function SettingsSheet() {
                   maxLength={60}
                   aria-label={`Occasion ${index + 1}`}
                   onChange={(event) =>
-                    setRows((current) => current.map((item, itemIndex) => (itemIndex === index ? event.target.value : item)))
+                    setRows((current) =>
+                      current.map((item, itemIndex) =>
+                        itemIndex === index ? event.target.value : item,
+                      ),
+                    )
                   }
                   onBlur={(event) => {
                     const result = renameOccasion(index, event.currentTarget.value);
@@ -197,22 +222,29 @@ export function SettingsSheet() {
               reader.readAsText(file);
             }}
           />
-          <Button
-            type="button"
-            variant="ghost"
-            block
-            onClick={() => {
-              loadSample();
-              setName("The Coles");
-              syncOccasions();
-              setMessage("Sample household loaded.");
-            }}
-          >
-            Load sample household
-          </Button>
+          {session.data?.sampleData ? (
+            <Button
+              type="button"
+              variant="ghost"
+              block
+              onClick={() => {
+                loadSample();
+                setName("The Coles");
+                syncOccasions();
+                setMessage("Sample household loaded.");
+              }}
+            >
+              Load sample household
+            </Button>
+          ) : null}
           {confirmClear ? (
             <div className="flex gap-2">
-              <Button type="button" variant="secondary" block onClick={() => setConfirmClear(false)}>
+              <Button
+                type="button"
+                variant="secondary"
+                block
+                onClick={() => setConfirmClear(false)}
+              >
                 Cancel
               </Button>
               <Button
@@ -236,22 +268,16 @@ export function SettingsSheet() {
             </Button>
           )}
           {message ? <p className="text-sm text-muted">{message}</p> : null}
-          {session.data?.required ? (
-            <Button
-              type="button"
-              variant="ghost"
-              block
-              onClick={() => {
-                void api.logout().finally(() => window.location.reload());
-              }}
-            >
-              Lock ledger
-            </Button>
-          ) : null}
           <p className="text-sm text-muted">
             Asking a question sends the gift list to the assistant. Nothing is sent until you ask.
           </p>
-          <p className="border-t border-border pt-3 text-xs text-muted">About · Ribbon {versionLabel()}</p>
+          <p className="border-t border-border pt-3 text-xs text-muted">
+            About · Ribbon{" "}
+            {session.data
+              ? `v${session.data.version}${session.data.commit ? ` (${session.data.commit})` : ""}`
+              : versionLabel()}
+            {session.data?.enforceHttps ? " · HTTPS enforced" : ""}
+          </p>
         </div>
       </div>
     </Sheet>

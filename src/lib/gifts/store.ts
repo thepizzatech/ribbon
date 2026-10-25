@@ -61,7 +61,7 @@ function emptyLedger(): Ledger {
 function freshHousehold(): Ledger {
   return {
     householdName: "Our household",
-    people: [{ id: crypto.randomUUID(), name: "You", role: "You", circle: "household" }],
+    people: [{ id: crypto.randomUUID(), name: "You", role: "You", circle: "household", relationship: "self" }],
     gifts: [],
     occasions: [...DEFAULT_OCCASIONS],
     demo: false,

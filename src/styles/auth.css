@@ -1,0 +1,146 @@
+/* Sign-in, first-run setup and the one-time import prompt: a centered card on the plain page. */
+.auth {
+  display: flex;
+  min-height: 100dvh;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 24px 16px calc(24px + env(safe-area-inset-bottom));
+  background: var(--color-background);
+}
+
+.auth-card {
+  width: min(100%, 460px);
+  border: 1px solid var(--color-border);
+  border-radius: 20px;
+  background: var(--color-card);
+  padding: 28px 24px;
+}
+
+@media (min-width: 640px) {
+  .auth-card {
+    padding: 32px;
+  }
+}
+
+.auth-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 20px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.auth-title {
+  font-size: 1.5rem;
+  font-weight: 300;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+}
+
+.auth-lead {
+  margin-top: 6px;
+  margin-bottom: 20px;
+  color: var(--color-muted);
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.auth-foot {
+  color: var(--color-subtle);
+  font-size: 0.75rem;
+  text-align: center;
+}
+
+.auth-steps {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 18px;
+}
+
+.auth-steps span {
+  height: 4px;
+  flex: 1;
+  border-radius: 999px;
+  background: var(--color-border);
+  transition: background var(--motion-quick);
+}
+
+.auth-steps span.is-on {
+  background: var(--color-foreground);
+}
+
+.auth-error {
+  border: 1px solid color-mix(in oklab, var(--color-out) 40%, transparent);
+  border-radius: 10px;
+  background: color-mix(in oklab, var(--color-out) 8%, transparent);
+  padding: 10px 12px;
+  color: var(--color-foreground);
+  font-size: 0.8125rem;
+}
+
+.member-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px;
+  border: 1px solid var(--color-border);
+  border-radius: 14px;
+  padding: 10px;
+}
+
+.member-row .full {
+  grid-column: 1 / -1;
+}
+
+.member-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.auth-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.auth-actions > * {
+  flex: 1;
+}
+
+.row-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.user-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  padding: 8px 10px 8px 12px;
+  font-size: 0.875rem;
+}
+
+.user-row .meta {
+  min-width: 0;
+  flex: 1;
+}
+
+.role-chip {
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  padding: 2px 8px;
+  color: var(--color-muted);
+  font-size: 0.6875rem;
+  font-weight: 500;
+}

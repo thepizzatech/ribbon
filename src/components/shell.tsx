@@ -1,3 +1,4 @@
+import { useQuery } from "@tanstack/react-query";
 import { Link, Outlet, useNavigate, useRouterState } from "@tanstack/react-router";
 import {
   Bell,
@@ -20,6 +21,7 @@ import { GiftSheet } from "@/components/gift-sheet";
 import { PersonSheet } from "@/components/person-sheet";
 import { SettingsSheet } from "@/components/settings-sheet";
 import { Toaster } from "@/components/toaster";
+import { api } from "@/lib/gifts/api";
 import { needsYou } from "@/lib/gifts/insights";
 import { useLedger } from "@/lib/gifts/store";
 import { setTheme, useTheme } from "@/lib/theme";
@@ -146,6 +148,7 @@ function initials(name: string) {
 function Sidebar() {
   const { open } = useOverlay();
   const household = useLedger((state) => state.householdName);
+  const user = useQuery({ queryKey: ["session"], queryFn: api.session, refetchOnWindowFocus: false }).data?.user;
   const gifts = useLedger((state) => state.gifts);
   const people = useLedger((state) => state.people);
   const setListFocus = useLedger((state) => state.setListFocus);
@@ -196,11 +199,13 @@ function Sidebar() {
         </a>
         <div className="side-user mt-2">
           <span className="avatar" aria-hidden="true">
-            {initials(household)}
+            {initials(user?.displayName ?? household)}
           </span>
           <span className="min-w-0 flex-1">
-            <span className="block truncate text-sm font-medium">{household}</span>
-            <span className="block truncate text-xs text-muted">Owner · Household</span>
+            <span className="block truncate text-sm font-medium">{user?.displayName ?? household}</span>
+            <span className="block truncate text-xs text-muted">
+              {user ? (user.role === "owner" ? "Owner" : "Member") : "Household"} · {household}
+            </span>
           </span>
         </div>
         <p className="side-version">Ribbon {versionLabel()}</p>

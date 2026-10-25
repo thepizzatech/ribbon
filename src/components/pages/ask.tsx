@@ -3,6 +3,7 @@ import { Sparkles } from "lucide-react";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Button, TextArea } from "@/components/ui";
 import { askLedger } from "@/lib/ask";
+import { getCsrfToken } from "@/lib/gifts/api";
 import { serializeLedger, todayISO, yearsOf } from "@/lib/gifts/model";
 import { useLedger } from "@/lib/gifts/store";
 
@@ -48,7 +49,7 @@ export function AskPage() {
         gifts,
         today: todayISO(),
       });
-      const result = await askLedger({ data: { question: trimmed, ledger } });
+      const result = await askLedger({ data: { question: trimmed, ledger }, headers: { "x-csrf-token": getCsrfToken() } });
       if (!result.ok) setError(result.error);
       else setAnswer(result.text);
     } catch {

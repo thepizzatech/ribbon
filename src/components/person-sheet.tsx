@@ -1,7 +1,17 @@
 import { useEffect, useState } from "react";
 import { Button, Field, Sheet, TextInput } from "@/components/ui";
 import { useOverlay } from "@/components/overlay";
-import { formatDate, giftsForPerson, personName, type Circle, type Person } from "@/lib/gifts/model";
+import { RelationshipSelect } from "@/components/relationship-select";
+import {
+  formatDate,
+  giftsForPerson,
+  normalizeRelationship,
+  personName,
+  relationshipLabel,
+  type Circle,
+  type Person,
+  type Relationship,
+} from "@/lib/gifts/model";
 import { useLedger } from "@/lib/gifts/store";
 
 export function PersonSheet() {
@@ -14,7 +24,8 @@ export function PersonSheet() {
   const removePerson = useLedger((state) => state.removePerson);
 
   const [name, setName] = useState("");
-  const [role, setRole] = useState("");
+  const [relationship, setRelationship] = useState<Relationship>("friend");
+  const [custom, setCustom] = useState("");
   const [circle, setCircle] = useState<Circle>("outside");
   const [error, setError] = useState("");
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -25,7 +36,8 @@ export function PersonSheet() {
     if (!editing) return;
     const existing = editing.id ? useLedger.getState().people.find((person) => person.id === editing.id) : undefined;
     setName(existing?.name ?? "");
-    setRole(existing?.role ?? "");
+    setRelationship(existing ? normalizeRelationship(existing.relationship, existing.role) : "friend");
+    setCustom(existing && existing.relationship === "other" ? existing.role : "");
     setCircle(existing?.circle ?? "outside");
     setError("");
     setConfirmDelete(false);
@@ -43,8 +55,9 @@ export function PersonSheet() {
     const next: Person = {
       id: existing?.id ?? crypto.randomUUID(),
       name: trimmed.slice(0, 80),
-      role: role.trim().slice(0, 40),
+      role: relationship === "other" ? custom.trim().slice(0, 40) || "Other" : relationshipLabel(relationship),
       circle,
+      relationship,
     };
     if (existing) updatePerson(existing.id, next);
     else addPerson(next);
@@ -70,9 +83,14 @@ export function PersonSheet() {
         <Field label="Name">
           <TextInput value={name} maxLength={80} onChange={(event) => setName(event.target.value)} />
         </Field>
-        <Field label="Relation" hint="Partner, aunt, friend">
-          <TextInput value={role} maxLength={40} onChange={(event) => setRole(event.target.value)} />
+        <Field label="Relationship">
+          <RelationshipSelect value={relationship} onChange={setRelationship} />
         </Field>
+        {relationship === "other" ? (
+          <Field label="Describe them" hint="Neighbor, coworker, teacher">
+            <TextInput value={custom} maxLength={40} onChange={(event) => setCustom(event.target.value)} />
+          </Field>
+        ) : null}
         <div className="segment cols-2" role="group" aria-label="Circle">
           {(
             [
