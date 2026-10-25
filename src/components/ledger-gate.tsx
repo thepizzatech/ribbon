@@ -112,7 +112,7 @@ export function LedgerGate({ children }: { children: ReactNode }) {
   }
   if (!session.data) return <Loading />;
   if (session.data.setupRequired) return <SetupFlow session={session.data} onDone={accept} />;
-  if (!signedIn) return <LoginForm onDone={accept} />;
+  if (!signedIn) return <LoginForm session={session.data} onDone={accept} />;
   if (ledger.isError && !ready) {
     return (
       <Centered>

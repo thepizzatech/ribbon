@@ -51,9 +51,8 @@ The version lives in `package.json`. The build bakes it in and shows it in Setti
 ## Running a published image
 
 ```bash
-export RIBBON_IMAGE=ghcr.io/thepizzatech/ribbon:0.2.0-beta.1
-docker compose -f docker-compose.prod.yml pull ribbon
-docker compose -f docker-compose.prod.yml up -d --no-build
+RIBBON_TAG=0.2.0-beta.1 docker compose pull
+RIBBON_TAG=0.2.0-beta.1 docker compose up -d
 ```
 
 ## Not done yet

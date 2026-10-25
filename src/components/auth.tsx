@@ -32,7 +32,20 @@ function messageOf(error: unknown, fallback: string) {
   return error instanceof ApiError ? error.message : fallback;
 }
 
-export function LoginForm({ onDone }: { onDone: (session: Session) => void }) {
+export function InsecureNotice({ session }: { session: Pick<Session, "secure" | "insecureLoginBlocked" | "privateNetwork"> }) {
+  if (session.secure) return null;
+  return (
+    <p className="auth-warn" role={session.insecureLoginBlocked ? "alert" : "note"}>
+      <strong>Connection not secure.</strong>{" "}
+      {session.insecureLoginBlocked ??
+        (session.privateNetwork
+          ? "This page is on plain HTTP. That is fine on your home network, but anyone on it could read your password. Use an HTTPS address before opening Ribbon to the internet."
+          : "This page is on plain HTTP. Use an HTTPS address.")}
+    </p>
+  );
+}
+
+export function LoginForm({ session, onDone }: { session: Session; onDone: (session: Session) => void }) {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [message, setMessage] = useState("");
@@ -53,6 +66,7 @@ export function LoginForm({ onDone }: { onDone: (session: Session) => void }) {
 
   return (
     <AuthFrame title="Sign in" lead="Use the login you or your family set up for Ribbon.">
+      <InsecureNotice session={session} />
       <form className="auth-form" onSubmit={submit}>
         <Field label="Username or email">
           <TextInput
@@ -77,7 +91,7 @@ export function LoginForm({ onDone }: { onDone: (session: Session) => void }) {
             {message}
           </p>
         ) : null}
-        <Button type="submit" block disabled={busy || !username.trim() || !password}>
+        <Button type="submit" block disabled={busy || !username.trim() || !password || Boolean(session.insecureLoginBlocked)}>
           {busy ? "Signing in…" : "Sign in"}
         </Button>
       </form>
@@ -262,6 +276,7 @@ export function SetupFlow({ session, onDone }: { session: Session; onDone: (sess
       }
     >
       {steps}
+      <InsecureNotice session={session} />
       <form className="auth-form" onSubmit={finish}>
         <Field label="Username or email">
           <TextInput

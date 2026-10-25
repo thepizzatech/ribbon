@@ -1,0 +1,27 @@
+# Optional: HTTPS with Caddy in front of Ribbon (needs Docker Compose 2.24+).
+#   SITE_ADDRESS=ribbon.example.com docker compose -f docker-compose.yml -f docker-compose.caddy.yml up -d
+# A public domain gets a Let's Encrypt certificate. A LAN IP gets Caddy's own local certificate
+# (see docs/REVERSE-PROXY.md). Only Caddy publishes ports; Ribbon is reachable through it alone.
+services:
+  ribbon:
+    ports: !override []
+    environment:
+      PUBLIC_URL: https://${SITE_ADDRESS:?set SITE_ADDRESS to the address people will type}
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    depends_on:
+      - ribbon
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      SITE_ADDRESS: ${SITE_ADDRESS}
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+
+volumes:
+  caddy_data:
+  caddy_config:

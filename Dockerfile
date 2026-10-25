@@ -37,10 +37,9 @@ LABEL org.opencontainers.image.title="Ribbon" \
       org.opencontainers.image.revision=$GIT_COMMIT
 WORKDIR /app
 # Production defaults: no sample data, and the family sets up the ledger on first visit.
-# ENFORCE_HTTPS is off here so a bare `docker run` still works; docker-compose.prod.yml turns it on.
+# Ribbon speaks plain HTTP on 8080; put an HTTPS reverse proxy in front (docs/REVERSE-PROXY.md).
 ENV NODE_ENV=production \
     SEED_SAMPLE_DATA=false \
-    ENFORCE_HTTPS=false \
     GIT_COMMIT=$GIT_COMMIT \
     HOST=0.0.0.0 \
     PORT=8080 \

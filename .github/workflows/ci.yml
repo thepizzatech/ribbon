@@ -26,15 +26,13 @@ jobs:
       - name: Compose files are valid
         run: |
           docker compose -f docker-compose.yml config -q
-          docker compose -f docker-compose.prod.yml config -q
-      - name: Proxy config is valid
+          docker compose -f docker-compose.yml -f docker-compose.build.yml config -q
+          docker compose -f docker-compose.dev.yml config -q
+          SITE_ADDRESS=ribbon.example.com docker compose -f docker-compose.yml -f docker-compose.caddy.yml config -q
+      - name: Caddyfile is valid
         run: |
-          mkdir -p "$RUNNER_TEMP/caddy"
-          for site in 10.0.0.5 ribbon.lan ribbon.example.com; do
-            docker run --rm -v "$PWD/deploy:/deploy:ro" -v "$RUNNER_TEMP/caddy:/out" \
-              -e SITE_ADDRESS="$site" -e DRY_RUN=1 -e CADDYFILE_OUT=/out/Caddyfile caddy:2-alpine sh /deploy/caddy-entrypoint.sh
-            docker run --rm -v "$RUNNER_TEMP/caddy:/out:ro" caddy:2-alpine caddy validate --config /out/Caddyfile --adapter caddyfile
-          done
+          docker run --rm -e SITE_ADDRESS=ribbon.example.com -v "$PWD/deploy/Caddyfile:/etc/caddy/Caddyfile:ro" \
+            caddy:2-alpine caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile
       - name: Production image builds and starts
         run: |
           docker build --target runner --build-arg GIT_COMMIT=${GITHUB_SHA} -t ribbon:ci .

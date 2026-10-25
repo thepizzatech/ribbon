@@ -1,5 +1,5 @@
 # Development: hot reload with your source mounted in.
-#   docker compose up --build
+#   docker compose -f docker-compose.dev.yml up --build
 # Then open http://localhost:8080
 #
 # Dev defaults: SEED_SAMPLE_DATA=true loads a sample household into a new database and creates a dev login

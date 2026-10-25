@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { AccountSection } from "@/components/account";
+import { InsecureNotice } from "@/components/auth";
 import { Button, Field, Sheet, TextInput } from "@/components/ui";
 import { useOverlay } from "@/components/overlay";
 import { api } from "@/lib/gifts/api";
@@ -85,6 +86,8 @@ export function SettingsSheet() {
             Save name
           </Button>
         </form>
+
+        {session.data && !session.data.secure ? <InsecureNotice session={session.data} /> : null}
 
         <AccountSection />
 
@@ -276,7 +279,7 @@ export function SettingsSheet() {
             {session.data
               ? `v${session.data.version}${session.data.commit ? ` (${session.data.commit})` : ""}`
               : versionLabel()}
-            {session.data?.enforceHttps ? " · HTTPS enforced" : ""}
+            {session.data?.secure ? " · HTTPS" : ""}
           </p>
         </div>
       </div>

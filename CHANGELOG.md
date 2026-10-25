@@ -4,6 +4,20 @@ All notable changes to Ribbon are recorded here. The format follows [Keep a Chan
 
 ## [Unreleased]
 
+### Breaking
+
+- **The bundled Caddy proxy is gone.** `docker-compose.prod.yml`, `deploy/caddy-entrypoint.sh` and the `SITE_ADDRESS`, `HTTP_PORT`, `HTTPS_PORT` and `TLS_MODE` settings no longer exist, and Ribbon no longer redirects HTTP to HTTPS itself. Ribbon listens on plain HTTP, port 8080, and `docker-compose.yml` publishes `${PORT:-8080}:8080`. Put your own HTTPS proxy in front (see `docs/REVERSE-PROXY.md`), or use the optional `docker-compose.caddy.yml` overlay.
+- The default `docker-compose.yml` now **pulls `ghcr.io/thepizzatech/ribbon`** instead of building. Build from source with `docker-compose.build.yml`; the old development compose is `docker-compose.dev.yml`. The `ribbon_data` volume name is unchanged, so data carries over.
+- `ENFORCE_HTTPS` is deprecated (logs a warning). It now means "refuse password sign-in over plain HTTP from everywhere".
+- If you ran the old production compose, update your reverse-proxy/bookmarks to the new address, and remove any override that published the app port next to Caddy.
+
+### Added
+
+- `PUBLIC_URL` and `TRUSTED_PROXIES`. `X-Forwarded-Proto`, `-Host` and `-For` are honoured only from trusted peers (default: loopback and private ranges, including Tailscale's `100.64/10`); previously any client could set them.
+- The `Secure` cookie flag, the `__Host-` prefix and HSTS follow the effective scheme. HSTS is six months without `includeSubDomains`; `HSTS=off` disables it. Plain-HTTP LAN sign-in works.
+- Password sign-in over plain HTTP from public addresses is refused unless `ALLOW_INSECURE_LOGIN=true`. A "Connection not secure" notice appears on the sign-in page and in Settings.
+- `docs/REVERSE-PROXY.md` with recipes for Nginx Proxy Manager, Caddy, Traefik, Tailscale and Cloudflare Tunnel.
+
 ## [0.2.0-dev.1] - 2026-10-24
 
 First development build of 0.2. Not released yet: `main` is the development branch (see [docs/RELEASING.md](docs/RELEASING.md)).

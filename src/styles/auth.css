@@ -144,3 +144,13 @@
   font-size: 0.6875rem;
   font-weight: 500;
 }
+
+.auth-warn {
+  margin-bottom: 14px;
+  border: 1px solid color-mix(in oklab, var(--color-warn) 50%, transparent);
+  border-radius: 10px;
+  background: color-mix(in oklab, var(--color-warn) 10%, transparent);
+  padding: 10px 12px;
+  font-size: 0.8125rem;
+  line-height: 1.45;
+}

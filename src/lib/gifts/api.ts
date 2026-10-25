@@ -67,7 +67,11 @@ export type Session = {
   hasLedger: boolean;
   householdName: string | null;
   setupCodeRequired: boolean;
-  enforceHttps: boolean;
+  /** The connection looks like HTTPS to the server (directly or through a trusted proxy). */
+  secure: boolean;
+  /** Set when password sign-in is refused from this connection (plain HTTP from outside the home network). */
+  insecureLoginBlocked: string | null;
+  privateNetwork: boolean;
   sampleData: boolean;
   authed: boolean;
   user: AccountUser | null;
