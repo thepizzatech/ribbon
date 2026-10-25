@@ -1,0 +1,589 @@
+/* Overview dashboard */
+.page-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px 16px;
+  margin-bottom: 20px;
+}
+
+.page-head .actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.dash-grid {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.dash-col {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 16px;
+}
+
+@media (min-width: 768px) {
+  .dash-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .dash-col.is-wide {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (min-width: 1280px) {
+  .dash-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    align-items: start;
+  }
+
+  .dash-col.is-wide {
+    grid-column: auto;
+  }
+}
+
+.hero-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 10px;
+  margin-top: 14px;
+}
+
+.progress {
+  position: relative;
+  height: 10px;
+  margin-top: 18px;
+  border-radius: 999px;
+  background: var(--color-secondary);
+}
+
+.progress-fill {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: repeating-linear-gradient(135deg, #3b82f6 0 3px, #60a5fa 3px 6px);
+  transform-origin: left;
+  animation: grow-x 700ms var(--ease-out) both;
+}
+
+.progress-marker {
+  position: absolute;
+  top: -5px;
+  width: 2px;
+  height: 20px;
+  border-radius: 2px;
+  background: var(--color-foreground);
+}
+
+.progress-legend {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 8px;
+  color: var(--color-muted);
+  font-size: 0.75rem;
+}
+
+.stat-rows {
+  margin-top: 16px;
+}
+
+.stat-row {
+  display: flex;
+  min-height: 48px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border-top: 1px solid var(--color-border);
+  color: var(--color-muted);
+  font-size: 0.8125rem;
+}
+
+.stat-row b {
+  color: var(--color-foreground);
+  font-size: 1.0625rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+
+.stat-row .end {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* Month chart: hatched bars, no grid or axes, black tooltip on hover/focus */
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  color: var(--color-muted);
+  font-size: 0.75rem;
+}
+
+.legend i {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  margin-right: 6px;
+  border-radius: 3px;
+  vertical-align: -1px;
+}
+
+.legend .in {
+  background: var(--color-in);
+}
+
+.legend .out {
+  background: var(--color-out);
+}
+
+.mchart {
+  position: relative;
+  height: 200px;
+  margin-top: 20px;
+}
+
+.mchart-bars {
+  position: absolute;
+  inset: 0 0 22px;
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  align-items: end;
+  gap: 6px;
+}
+
+.mcol {
+  position: relative;
+  display: flex;
+  height: 100%;
+  align-items: flex-end;
+  justify-content: center;
+  border-radius: 8px;
+  outline-offset: 1px;
+}
+
+.mbar {
+  display: flex;
+  width: 100%;
+  max-width: 26px;
+  flex-direction: column-reverse;
+  overflow: hidden;
+  border-radius: 7px 7px 2px 2px;
+  transform-origin: bottom;
+  animation: grow-y 650ms var(--ease-out) both;
+  animation-delay: calc(var(--i) * 28ms);
+}
+
+.mseg-out {
+  background: repeating-linear-gradient(135deg, var(--color-out) 0 1.5px, color-mix(in oklab, var(--color-out) 14%, transparent) 1.5px 4.5px);
+}
+
+.mseg-in {
+  background: repeating-linear-gradient(135deg, var(--color-in) 0 1.5px, color-mix(in oklab, var(--color-in) 14%, transparent) 1.5px 4.5px);
+}
+
+.mcol.is-hot .mseg-out {
+  background: var(--color-out);
+}
+
+.mcol.is-hot .mseg-in {
+  background: var(--color-in);
+}
+
+.mcol:hover .mbar,
+.mcol:focus-visible .mbar {
+  filter: brightness(1.12);
+}
+
+.mtarget {
+  position: absolute;
+  right: 0;
+  left: 0;
+  border-top: 1.5px dashed var(--color-subtle);
+  pointer-events: none;
+}
+
+.mtarget span {
+  position: absolute;
+  bottom: 3px;
+  left: 0;
+  background: var(--color-card);
+  padding: 0 4px 0 0;
+  color: var(--color-muted);
+  font-size: 0.6875rem;
+}
+
+.mlabels {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: 6px;
+  color: var(--color-subtle);
+  font-size: 0.6875rem;
+  text-align: center;
+}
+
+.mlabels .is-hot {
+  color: var(--color-foreground);
+  font-weight: 600;
+}
+
+.mvalue {
+  position: absolute;
+  bottom: 100%;
+  color: var(--color-foreground);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.tip {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  z-index: 5;
+  border-radius: 8px;
+  background: #111827;
+  padding: 6px 10px;
+  color: #fff;
+  font-size: 0.75rem;
+  line-height: 1.35;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateX(-50%) translateY(4px);
+  transition: opacity var(--motion-quick), transform var(--motion-quick);
+  white-space: nowrap;
+  box-shadow: var(--float-shadow);
+}
+
+html[data-theme="dark"] .tip {
+  background: #f9fafb;
+  color: #111827;
+}
+
+.mcol:hover .tip,
+.mcol:focus-visible .tip {
+  opacity: 1;
+  transform: translateX(-50%);
+}
+
+.mcol:nth-child(-n + 2) .tip {
+  left: 0;
+  transform: translateY(4px);
+}
+
+.mcol:nth-child(-n + 2):hover .tip,
+.mcol:nth-child(-n + 2):focus-visible .tip {
+  transform: none;
+}
+
+.mcol:nth-last-child(-n + 2) .tip {
+  right: 0;
+  left: auto;
+  transform: translateY(4px);
+}
+
+.mcol:nth-last-child(-n + 2):hover .tip,
+.mcol:nth-last-child(-n + 2):focus-visible .tip {
+  transform: none;
+}
+
+/* Hatched waterfall */
+.wf {
+  margin-top: 18px;
+}
+
+.wf-row {
+  position: relative;
+  display: grid;
+  grid-template-columns: 96px minmax(0, 1fr) auto;
+  grid-template-areas: "label track value";
+  align-items: center;
+  gap: 4px 10px;
+  min-height: 46px;
+  font-size: 0.8125rem;
+}
+
+.wf-label {
+  grid-area: label;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 500;
+}
+
+.wf-value {
+  grid-area: value;
+  color: var(--tone-rose-fg);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.wf-value.is-total {
+  color: var(--color-foreground);
+  font-weight: 600;
+}
+
+.wf-track {
+  position: relative;
+  grid-area: track;
+  height: 18px;
+}
+
+.wf-bar {
+  position: absolute;
+  top: 2px;
+  bottom: 2px;
+  border: 1px solid color-mix(in oklab, var(--color-deduct) 55%, transparent);
+  border-radius: 3px;
+  background: repeating-linear-gradient(135deg, var(--color-deduct) 0 1.5px, color-mix(in oklab, var(--color-deduct) 12%, transparent) 1.5px 5px);
+  transform-origin: left;
+  animation: grow-x 600ms var(--ease-out) both;
+  animation-delay: calc(var(--i) * 70ms);
+}
+
+.wf-bar::after {
+  position: absolute;
+  top: 100%;
+  right: -1px;
+  height: 30px;
+  border-left: 1px dashed var(--color-subtle);
+  content: "";
+}
+
+.wf-bar.is-total {
+  border: 0;
+  border-radius: 6px;
+  background: var(--color-out);
+}
+
+.wf-bar.is-total::after,
+.wf-row:nth-last-child(2) .wf-bar::after {
+  display: none;
+}
+
+@media (max-width: 420px) {
+  .wf-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas: "label value" "track track";
+    padding: 6px 0;
+  }
+}
+
+.note {
+  margin-top: 16px;
+  border: 1px solid var(--color-border);
+  border-radius: 14px;
+  background: var(--color-background);
+  padding: 12px 14px;
+  font-size: 0.8125rem;
+}
+
+.note p + p {
+  margin-top: 2px;
+  color: var(--color-muted);
+}
+
+/* Insight card: stacked radial gradients, blurred, with white copy on top */
+.insight {
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  min-height: 300px;
+  flex-direction: column;
+  overflow: hidden;
+  border-radius: var(--card-radius);
+  background: #1e3a8a;
+  padding: 20px;
+  color: #fff;
+}
+
+.insight-mesh {
+  position: absolute;
+  inset: -30%;
+  z-index: -1;
+  background:
+    radial-gradient(circle at 18% 22%, #3b82f6 0, transparent 42%),
+    radial-gradient(circle at 78% 18%, #8b5cf6 0, transparent 40%),
+    radial-gradient(circle at 70% 85%, #fca5a5 0, transparent 46%),
+    radial-gradient(circle at 25% 90%, #fdba74 0, transparent 32%),
+    #1e3a8a;
+  filter: blur(36px);
+}
+
+.insight::after {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: linear-gradient(180deg, rgb(3 7 18 / 0.28), transparent 55%);
+  content: "";
+}
+
+.insight-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid rgb(255 255 255 / 0.28);
+  border-radius: 999px;
+  background: rgb(255 255 255 / 0.14);
+  padding: 4px 10px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  backdrop-filter: blur(6px);
+}
+
+.insight-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.insight .hero-num {
+  margin-top: 28px;
+}
+
+.insight-unit {
+  margin-left: 10px;
+  font-size: 0.8125rem;
+  font-weight: 400;
+  letter-spacing: 0;
+  color: rgb(255 255 255 / 0.78);
+  font-size: 0.8125rem;
+}
+
+.insight h3 {
+  margin-top: 14px;
+  font-size: 1.25rem;
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  line-height: 1.25;
+}
+
+.insight-detail {
+  margin-top: 8px;
+  max-width: 34ch;
+  color: rgb(255 255 255 / 0.82);
+  font-size: 0.8125rem;
+}
+
+.insight-cta {
+  display: inline-flex;
+  align-self: flex-start;
+  align-items: center;
+  gap: 8px;
+  margin-top: auto;
+  min-height: 40px;
+  border-radius: 10px;
+  background: #fff;
+  padding: 0 14px;
+  color: #111827;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.insight-cta:hover {
+  background: #f3f4f6;
+}
+
+.insight-step {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  font-size: 0.75rem;
+}
+
+.insight-step button {
+  display: inline-flex;
+  width: 24px;
+  height: 24px;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: #fff;
+}
+
+.insight-step button:hover {
+  background: rgb(255 255 255 / 0.18);
+}
+
+.insight :focus-visible {
+  outline-color: #fff;
+}
+
+/* Needs you */
+.need-list {
+  margin: 12px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.need {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border-top: 1px solid var(--color-border);
+}
+
+.need:first-child {
+  border-top: 0;
+}
+
+.need-main {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  align-items: center;
+  gap: 12px;
+  border: 0;
+  background: transparent;
+  padding: 12px 0;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+}
+
+.need-main .t {
+  display: block;
+  overflow: hidden;
+  font-weight: 500;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.need-main .s {
+  display: block;
+  overflow: hidden;
+  color: var(--color-muted);
+  font-size: 0.75rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.need-main .chev {
+  margin-left: auto;
+  color: var(--color-subtle);
+}
+
+.need-done {
+  flex: none;
+  width: 30px;
+  padding: 0;
+  border-radius: 999px;
+}
