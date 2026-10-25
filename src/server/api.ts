@@ -7,14 +7,14 @@ import {
   relationshipLabel,
   type Person,
 } from "../lib/gifts/model.ts";
-import { enforceHttps, seedSampleData, setupCode } from "./config.ts";
+import { seedSampleData, setupCode } from "./config.ts";
 import {
   burnPasswordCheck,
   hashPassword,
   passwordProblem,
   verifyPassword,
 } from "./password.ts";
-import { isSecureRequest, originAllowed } from "./security.ts";
+import { clientAddress, insecureLoginReason, isPrivateAddress, isSecureRequest, originAllowed } from "./security.ts";
 import {
   clearMisses,
   createSession,
@@ -74,9 +74,7 @@ function respond(result: Result<object>, okStatus = 200): Response {
   return json(rest, { status: okStatus });
 }
 
-function clientKey(request: Request): string {
-  return request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "local";
-}
+const clientKey = clientAddress;
 
 type Body = { ok: true; value: unknown } | { ok: false; response: Response };
 
@@ -131,7 +129,7 @@ function clearCookies(): string[] {
   ];
 }
 
-function sessionPayload(db: Db, session: Session | null) {
+function sessionPayload(db: Db, session: Session | null, request: Request) {
   const setupRequired = userCount(db) === 0;
   const hasLedger = hasHousehold(db);
   return {
@@ -141,7 +139,9 @@ function sessionPayload(db: Db, session: Session | null) {
     hasLedger,
     householdName: setupRequired && hasLedger ? getLedger(db).householdName : null,
     setupCodeRequired: setupRequired && Boolean(setupCode()),
-    enforceHttps: enforceHttps(),
+    secure: isSecureRequest(request),
+    insecureLoginBlocked: insecureLoginReason(request),
+    privateNetwork: isPrivateAddress(clientAddress(request)),
     sampleData: seedSampleData(),
     authed: Boolean(session),
     user: session?.user ?? null,
@@ -200,10 +200,12 @@ export async function handleApi(request: Request, db?: Db): Promise<Response> {
     const session = readSession(store, token);
 
     // ---- endpoints that work before sign-in ----
-    if (resource === "session" && method === "GET" && !rawId) return json(sessionPayload(store, session));
+    if (resource === "session" && method === "GET" && !rawId) return json(sessionPayload(store, session, request));
 
     if (resource === "setup" && method === "POST" && !rawId) {
       if (userCount(store) > 0) return error(409, "Ribbon is already set up. Sign in instead.");
+      const refused = insecureLoginReason(request);
+      if (refused) return error(403, refused);
       const parsed = await readJson(request);
       if (!parsed.ok) return parsed.response;
       const body = (parsed.value ?? {}) as {
@@ -253,10 +255,12 @@ export async function handleApi(request: Request, db?: Db): Promise<Response> {
       });
       const made = createSession(store, owner.id);
       const fresh = readSession(store, made.token);
-      return json(sessionPayload(store, fresh), { status: 201, cookie: sessionCookie(made.token, secure) });
+      return json(sessionPayload(store, fresh, request), { status: 201, cookie: sessionCookie(made.token, secure) });
     }
 
     if (resource === "login" && method === "POST" && !rawId) {
+      const refused = insecureLoginReason(request);
+      if (refused) return error(403, refused);
       const parsed = await readJson(request);
       if (!parsed.ok) return parsed.response;
       const body = (parsed.value ?? {}) as { username?: unknown; password?: unknown };
@@ -278,7 +282,7 @@ export async function handleApi(request: Request, db?: Db): Promise<Response> {
       }
       clearMisses(username, address);
       const made = createSession(store, row.id);
-      return json(sessionPayload(store, readSession(store, made.token)), { cookie: sessionCookie(made.token, secure) });
+      return json(sessionPayload(store, readSession(store, made.token), request), { cookie: sessionCookie(made.token, secure) });
     }
 
     // ---- everything below needs a session, and writes need the CSRF token ----

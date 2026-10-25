@@ -35,7 +35,7 @@ after(() => {
   for (const dir of dirs) rmSync(dir, { recursive: true, force: true });
 });
 
-const ENV_KEYS = ["ENFORCE_HTTPS", "PUBLIC_URL", "SETUP_CODE", "SEED_SAMPLE_DATA", "NODE_ENV", "GIT_COMMIT", "DEV_PASSWORD"];
+const ENV_KEYS = ["ENFORCE_HTTPS", "ALLOW_INSECURE_LOGIN", "TRUSTED_PROXIES", "HSTS", "PUBLIC_URL", "SETUP_CODE", "SEED_SAMPLE_DATA", "NODE_ENV", "GIT_COMMIT", "DEV_PASSWORD"];
 const savedEnv: Record<string, string | undefined> = {};
 beforeEach(() => {
   for (const key of ENV_KEYS) savedEnv[key] = process.env[key];
@@ -424,14 +424,27 @@ describe("accounts and sessions", () => {
     assert.ok(good.body.csrfToken);
   });
 
-  test("cookies are Secure (and __Host- prefixed) over HTTPS or when ENFORCE_HTTPS is on", async () => {
+  test("cookies are Secure (and __Host- prefixed) only when the connection is effectively HTTPS", async () => {
     const { db } = await ready();
-    const viaProxy = await call(db, "POST", "/api/login", { username: "owner", password: "a-long-enough-password" }, null, { "x-forwarded-proto": "https" });
+    const login = (headers: Record<string, string> = {}) =>
+      call(db, "POST", "/api/login", { username: "owner", password: "a-long-enough-password" }, null, headers);
+    // trusted proxy (the default test peer is loopback) says https
+    const viaProxy = await login({ "x-forwarded-proto": "https" });
     assert.match(viaProxy.headers.get("set-cookie") ?? "", /^__Host-ribbon_session=.*; Secure/);
-    process.env.ENFORCE_HTTPS = "true";
-    const enforced = await call(db, "POST", "/api/login", { username: "owner", password: "a-long-enough-password" });
-    assert.match(enforced.headers.get("set-cookie") ?? "", /Secure/);
-    // The prefixed cookie is accepted when sent back.
+    // plain HTTP on the LAN: no Secure flag, so the login actually sticks
+    const plain = await login();
+    assert.doesNotMatch(plain.headers.get("set-cookie") ?? "", /Secure|__Host-/);
+    // from an untrusted peer the header is ignored (and the insecure login from outside is refused anyway)
+    process.env.ALLOW_INSECURE_LOGIN = "true";
+    const spoof = await login({ "x-forwarded-proto": "https", "x-ribbon-peer": "203.0.113.9" });
+    assert.doesNotMatch(spoof.headers.get("set-cookie") ?? "", /Secure/);
+    delete process.env.ALLOW_INSECURE_LOGIN;
+    // PUBLIC_URL https for this host
+    process.env.PUBLIC_URL = "https://localhost:8080";
+    const pub = await login();
+    assert.match(pub.headers.get("set-cookie") ?? "", /Secure/);
+    delete process.env.PUBLIC_URL;
+    // the prefixed cookie is accepted when sent back
     const cookie = (viaProxy.headers.get("set-cookie") ?? "").split(";")[0]!;
     assert.equal((await call(db, "GET", "/api/ledger", undefined, { cookie, csrf: "" })).status, 200);
   });
