@@ -7,7 +7,8 @@
 
 FROM node:22-bookworm-slim AS dev
 WORKDIR /app
-ENV DATA_DIR=/data
+ENV DATA_DIR=/data \
+    SEED_SAMPLE_DATA=true
 RUN mkdir -p /data
 COPY package.json package-lock.json ./
 RUN npm ci
@@ -20,11 +21,27 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci
 COPY . .
+# Short git SHA shown in Settings and /api/health (optional).
+ARG GIT_COMMIT=""
+ENV GIT_COMMIT=$GIT_COMMIT
 RUN npm run build
 
 FROM node:22-bookworm-slim AS runner
+ARG GIT_COMMIT=""
+ARG VERSION=""
+LABEL org.opencontainers.image.title="Ribbon" \
+      org.opencontainers.image.description="A family gift tracker you host yourself" \
+      org.opencontainers.image.source="https://github.com/thepizzatech/ribbon" \
+      org.opencontainers.image.licenses="MIT" \
+      org.opencontainers.image.version=$VERSION \
+      org.opencontainers.image.revision=$GIT_COMMIT
 WORKDIR /app
+# Production defaults: no sample data, and the family sets up the ledger on first visit.
+# ENFORCE_HTTPS is off here so a bare `docker run` still works; docker-compose.prod.yml turns it on.
 ENV NODE_ENV=production \
+    SEED_SAMPLE_DATA=false \
+    ENFORCE_HTTPS=false \
+    GIT_COMMIT=$GIT_COMMIT \
     HOST=0.0.0.0 \
     PORT=8080 \
     NITRO_HOST=0.0.0.0 \
