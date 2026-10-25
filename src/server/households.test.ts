@@ -122,3 +122,50 @@ describe("surprise-safe: nobody sees what is planned for them", () => {
     assert.equal((await call(db, "PUT", "/api/me/person", { personId: "p-june" }, kid)).status, 200);
   });
 });
+
+describe("linking households", () => {
+  test("invite, join, share a person, unlink — owners only, single use, expiring", async () => {
+    const db = freshDb();
+    const coles = signedIn(db, { username: "avery", personId: "p-avery" });
+    const kid = signedIn(db, { username: "noah", role: "member", personId: "p-noah" });
+    const rivera = secondHousehold(db);
+    assert.equal((await call(db, "POST", "/api/sharing/invite", {}, kid)).status, 403);
+    const invite = await call(db, "POST", "/api/sharing/invite", {}, coles);
+    assert.equal(invite.status, 201);
+    assert.match(invite.body.code, /^[A-Z2-9]{4}-[A-Z2-9]{4}-[A-Z2-9]{4}$/);
+    // the code is not stored in the clear
+    assert.equal(db.prepare("SELECT COUNT(*) AS n FROM household_invites WHERE code_hash = ?").get(invite.body.code)?.n, 0);
+    assert.equal((await call(db, "POST", "/api/sharing/join", { code: "AAAA-BBBB-CCCC" }, rivera)).status, 400);
+    assert.equal((await call(db, "POST", "/api/sharing/join", { code: invite.body.code }, coles)).status, 400); // own household
+    const joined = await call(db, "POST", "/api/sharing/join", { code: invite.body.code.toLowerCase() }, rivera);
+    assert.equal(joined.status, 200);
+    assert.equal(joined.body.links[0].name, "The Coles");
+    assert.equal((await call(db, "GET", "/api/sharing", undefined, coles)).body.links[0].name, "The Riveras");
+    // single use
+    const other = secondHousehold(db, "The Patels");
+    assert.equal((await call(db, "POST", "/api/sharing/join", { code: invite.body.code }, other)).status, 400);
+    // only owners flip "shared"
+    assert.equal((await call(db, "PATCH", "/api/people/p-noah", { shared: true }, kid)).status, 403);
+    assert.equal((await call(db, "PATCH", "/api/people/p-noah", { shared: true }, coles)).status, 200);
+    // a member's import can't turn sharing on
+    const file = (await call(db, "GET", "/api/export", undefined, kid)).body;
+    file.people = file.people.map((p: object) => ({ ...p, shared: true }));
+    await call(db, "POST", "/api/import", file, kid);
+    const people = (await call(db, "GET", "/api/people", undefined, coles)).body.people as { id: string; shared?: boolean }[];
+    assert.equal(people.find((p) => p.id === "p-noah")!.shared, true);
+    assert.equal(people.find((p) => p.id === "p-june")!.shared ?? false, false);
+    // unlink
+    assert.equal((await call(db, "DELETE", `/api/sharing/links/${coles.householdId}`, undefined, kid)).status, 403);
+    assert.equal((await call(db, "DELETE", `/api/sharing/links/${coles.householdId}`, undefined, rivera)).body.links.length, 0);
+    assert.equal((await call(db, "GET", "/api/sharing", undefined, coles)).body.links.length, 0);
+  });
+
+  test("an expired invite no longer works", async () => {
+    const db = freshDb();
+    const coles = signedIn(db, { username: "avery", personId: "p-avery" });
+    const rivera = secondHousehold(db);
+    const { createInvite, redeemInvite } = await import("./sharing.ts");
+    const old = createInvite(db, coles.householdId, coles.id, Date.now() - 8 * 24 * 60 * 60 * 1000);
+    assert.equal(redeemInvite(db, old.code, rivera.householdId).ok, false);
+  });
+});

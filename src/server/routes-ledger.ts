@@ -32,6 +32,9 @@ export function ledgerHandler(c: ApiCall): Response | null {
       break;
     case "people":
       if (method === "GET" && id === undefined) return json({ people: getLedger(ctx).people });
+      if ((method === "POST" || method === "PATCH") && c.body && typeof c.body === "object" && "shared" in c.body && !c.isOwner) {
+        return error(403, "Only a household owner can share someone with a linked household.");
+      }
       if (method === "POST" && id === undefined) return respond(addPerson(ctx, body), 201);
       if (method === "PATCH" && id !== undefined) return respond(updatePerson(ctx, id, body));
       if (method === "DELETE" && id !== undefined) return respond(removePerson(ctx, id));
@@ -60,6 +63,11 @@ export function ledgerHandler(c: ApiCall): Response | null {
         const record = (body ?? {}) as { demo?: unknown; demoDismissed?: unknown };
         const backup = parseBackupData(body);
         if (!backup) return error(400, "That file is not a Ribbon ledger.");
+        if (!c.isOwner) {
+          // Sharing people outward is an owner decision; a member's file can't change it.
+          const was = new Map(getLedger(ctx).people.map((p) => [p.id, p.shared === true]));
+          backup.people = backup.people.map((p) => ({ ...p, shared: was.get(p.id) ?? false }));
+        }
         const result = replaceLedger(ctx, backup, {
           demo: record.demo === true,
           demoDismissed: record.demoDismissed !== false,

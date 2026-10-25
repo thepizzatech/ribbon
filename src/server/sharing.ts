@@ -71,3 +71,56 @@ export function unlink(db: Db, a: string, b: string) {
     ).run(b, a);
   });
 }
+
+// ---- API ----
+
+import { error, json, type Handler } from "./http.ts";
+import { householdRow } from "./ledger.ts";
+
+const joinMisses = new Map<string, { count: number; since: number }>();
+const JOIN_WINDOW = 15 * 60 * 1000;
+export const resetJoinLimits = () => joinMisses.clear();
+
+export function sharingSummary(db: Db, hid: string) {
+  const links = linkedHouseholdIds(db, hid)
+    .map((id) => householdRow(db, id))
+    .filter((row): row is NonNullable<typeof row> => Boolean(row))
+    .map((row) => ({ id: row.id, name: row.name }));
+  const sharedPeople = (db.prepare("SELECT COUNT(*) AS n FROM people WHERE household_id = ? AND shared = 1").get(hid) as { n: number }).n;
+  return { household: { id: hid, name: householdRow(db, hid)?.name ?? "" }, links, sharedPeople };
+}
+
+export const sharingHandler: Handler = async (c) => {
+  if (c.resource !== "sharing") return null;
+  const { db, method, id, rest, session } = c;
+  const hid = session.user.householdId;
+  if (method === "GET" && id === undefined) return json(sharingSummary(db, hid));
+  if (!c.isOwner) return error(403, "Only a household owner can change sharing.");
+  if (method === "POST" && id === "invite") {
+    const made = createInvite(db, hid, session.user.id);
+    return json({ code: made.code, expiresAt: made.expiresAt }, { status: 201 });
+  }
+  if (method === "POST" && id === "join") {
+    const now = Date.now();
+    const key = session.user.id;
+    const entry = joinMisses.get(key);
+    if (entry && now - entry.since < JOIN_WINDOW && entry.count >= 10) return error(429, "Too many tries. Wait a few minutes and try again.");
+    const code = String((c.body as { code?: unknown } | null)?.code ?? "");
+    const result = redeemInvite(db, code, hid, now);
+    if (!result.ok) {
+      const fresh = entry && now - entry.since < JOIN_WINDOW ? entry : { count: 0, since: now };
+      fresh.count += 1;
+      joinMisses.set(key, fresh);
+      return error(400, result.reason);
+    }
+    joinMisses.delete(key);
+    return json(sharingSummary(db, hid));
+  }
+  if (method === "DELETE" && id === "links" && rest.length === 1) {
+    const other = decodeURIComponent(rest[0]!);
+    if (!areLinked(db, hid, other) || other === hid) return error(404, "That household isn’t linked.");
+    unlink(db, hid, other);
+    return json(sharingSummary(db, hid));
+  }
+  return null;
+};
