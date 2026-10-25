@@ -50,6 +50,15 @@ Seven skippable steps (dashboard, add a gift, ledger, people, Ask, theme, settin
 - In development with `SEED_SAMPLE_DATA` on, the tour stays off unless `TOUR_IN_DEV=true`.
 - `TOUR_ALWAYS=true` shows it on every visit until it is finished with Done (for testing, in any mode).
 
+## Welcome setup
+
+The first visit creates only the owner account (and asks for `SETUP_CODE` when one is configured). Straight after the first sign-in the owner lands on a full-page **Welcome setup**: step one names the family or household, step two adds family members with a name and a role (son, wife, grandparent, friend and so on) and whether they are in your household. **Finish** opens the empty Overview, and the guided tour follows.
+
+- The state lives on the server (`households.setup_complete`, `setup_step`), so an abandoned setup resumes on the same step from any device.
+- It is enforced server-side: until it is complete the owner's other API calls answer `409 welcome_setup_required` (only the welcome endpoints, sign-out and change-password work), and the tour does not auto-open. Members and other owners never see it, and it never appears for a household that already has data or in sample-data development mode.
+- API: `GET /api/welcome`, `PUT /api/welcome` (save a step), `POST /api/welcome/complete`. They answer 404 once finished. Scripts can still send `familyName` and `people` to `POST /api/setup` to skip the page.
+- The first owner can only be created from your home network unless `SETUP_CODE` is set (or `ALLOW_PUBLIC_SETUP=true`).
+
 ## Real installs never ship sample data
 
-`SEED_SAMPLE_DATA` defaults to off in production and in the Docker image. A new database starts with onboarding: family name, family members with their relationship and roles, then the owner login.
+`SEED_SAMPLE_DATA` defaults to off in production and in the Docker image. A new database starts with the owner account, then the Welcome setup (see above).

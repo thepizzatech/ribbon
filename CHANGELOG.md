@@ -4,6 +4,40 @@ All notable changes to Ribbon are recorded here. The format follows [Keep a Chan
 
 ## [Unreleased]
 
+## [0.3.0-dev.2] - 2026-10-25
+
+Development build. Adds the Welcome setup and the result of a full security review ([docs/SECURITY-AUDIT.md](docs/SECURITY-AUDIT.md)).
+
+### Changed
+
+- **Onboarding is split in two.** The first visit only creates the owner account. Right after the first sign-in a full-page **Welcome setup** asks for the family name and family members (name and role), then opens the empty Overview and the guided tour. Progress is saved on the server so it resumes if abandoned, and the server holds the rest of the API closed (`409 welcome_setup_required`) until it is done. Existing installs with data count as complete, members never see it, and sample-data development mode skips it. `POST /api/setup` still accepts `familyName` and `people` for scripts.
+- Password hashing is stronger (scrypt N=2^16, r=8, p=2). Existing hashes keep working and are upgraded on the owner's next sign-in.
+- Sign-in lockout counts misses per account and address, per account from anywhere, and per address across accounts, so rotating or forging `X-Forwarded-For` no longer dodges it. Passkey sign-in has its own counters and no longer shares one global lockout.
+- Passkeys now require user verification (PIN, fingerprint or face).
+- `docker-compose.yml` drops all Linux capabilities and sets `no-new-privileges`. GitHub Actions use read-only tokens by default, job-level write permissions and SHA-pinned actions; Dependabot is enabled.
+- A Secret Santa organiser can no longer switch peeking on after the names are drawn (turn it on before drawing).
+
+### Added
+
+- `ALLOW_PUBLIC_SETUP`. **Heads-up:** with no `SETUP_CODE`, the first owner can now only be created from your home network (the setup page says so). If your server is reachable from the internet and you have not created the owner yet, set `SETUP_CODE` first.
+- Setup-code guesses are rate limited and compared in constant time.
+- `.env.example` is now actually tracked in git.
+
+### Fixed (security)
+
+- A request path with broken percent-encoding (such as `/%E0%A4%A`) left the connection hanging forever; it now answers 400.
+- Chunked uploads without `Content-Length` are cut off at the 5 MB (256 MB for restore) cap while reading instead of after buffering.
+- A restore file with no owner login is refused (it would have locked everyone out and re-opened first-run setup). Uploaded databases are opened with `trusted_schema=OFF`, and backup files and folder are owner-only on disk.
+- The person who set up Ribbon can no longer be demoted or removed by another owner.
+- Wishlist links imported from CSV follow the same http(s)-only rule as the form; the client also checks before rendering a link.
+- A person's name with a bare carriage return or control character can no longer inject lines into the calendar feed.
+- Removing yourself from the ledger no longer reveals whether a surprise is planned for you.
+- Single sign-on: the provider's endpoints must be https (or private-network http), redirects are refused when talking to the provider, and starting SSO is rate limited.
+- Ask: per-person rate limit, Origin and Welcome-setup checks, and the ledger is passed to the model as delimited untrusted data.
+- Passkey ids with broken percent-encoding no longer cause a 500; the open passkey-challenge table is capped and its options endpoint is rate limited.
+- `Cross-Origin-Resource-Policy: same-origin` on every response and `Cache-Control: no-cache` on the HTML shell.
+- Dependencies updated (`npm audit`: 0 known vulnerabilities).
+
 ## [0.3.0-dev.1] - 2026-10-25
 
 Development build. Not released: `main` stays the development branch. Details of each feature: [docs/FEATURES.md](docs/FEATURES.md).
