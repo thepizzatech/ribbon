@@ -23,13 +23,44 @@ export function respond(result: Result<object>, okStatus = 200): Response {
 
 export type Body = { ok: true; value: unknown } | { ok: false; response: Response };
 
+/**
+ * Read a request body, giving up (null) the moment it passes `max` bytes. The Content-Length header is
+ * only a hint (chunked uploads have none), so the count is made while reading, before anything is buffered past the cap.
+ */
+export async function readCapped(request: Request, max: number): Promise<Uint8Array | null> {
+  const declared = Number(request.headers.get("content-length") ?? 0);
+  if (declared > max) return null;
+  if (!request.body) return new Uint8Array(0);
+  const reader = request.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    total += value.byteLength;
+    if (total > max) {
+      await reader.cancel().catch(() => {});
+      return null;
+    }
+    chunks.push(value);
+  }
+  const out = new Uint8Array(total);
+  let at = 0;
+  for (const chunk of chunks) {
+    out.set(chunk, at);
+    at += chunk.byteLength;
+  }
+  return out;
+}
+
 export async function readJson(request: Request): Promise<Body> {
   const type = request.headers.get("content-type") ?? "";
   if (!type.toLowerCase().includes("application/json")) {
     return { ok: false, response: error(415, "Send JSON with Content-Type: application/json.") };
   }
-  const text = await request.text();
-  if (text.length > MAX_BODY) return { ok: false, response: error(413, "That request is too large.") };
+  const bytes = await readCapped(request, MAX_BODY);
+  if (!bytes) return { ok: false, response: error(413, "That request is too large.") };
+  const text = new TextDecoder().decode(bytes);
   if (!text.trim()) return { ok: true, value: {} };
   try {
     return { ok: true, value: JSON.parse(text) };

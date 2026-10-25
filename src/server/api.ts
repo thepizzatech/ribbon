@@ -34,6 +34,7 @@ import {
   type Role,
   type Session,
 } from "./users.ts";
+import { isInstanceAdmin } from "./backup.ts";
 import { versionInfo } from "./version.ts";
 import { createHousehold, firstHouseholdId, getPerson, hasHousehold, householdRow, type Ctx } from "./ledger.ts";
 import { extraSessionFields, extraPublicHandlers, extraHandlers } from "./features.ts";
@@ -381,6 +382,8 @@ async function accountHandler(c: ApiCall): Promise<Response | null> {
       if (input.role !== undefined) {
         if (input.role !== "owner" && input.role !== "member") return error(400, "Role is owner or member.");
         if (target.role === "owner" && input.role === "member") {
+          // The person who set up Ribbon holds the backups and every household; no one (not even them) demotes that login.
+          if (isInstanceAdmin(db, target)) return error(409, "The person who set up Ribbon has to stay an owner.");
           const owners = (db.prepare("SELECT COUNT(*) AS n FROM users WHERE role = 'owner' AND household_id = ?").get(hid) as { n: number }).n;
           if (owners <= 1) return error(409, "Keep at least one owner.");
         }
@@ -392,6 +395,8 @@ async function accountHandler(c: ApiCall): Promise<Response | null> {
       return json({ user: getUser(db, id) });
     }
     if (method === "DELETE" && id !== undefined) {
+      const target = getUser(db, id);
+      if (target && isInstanceAdmin(db, target)) return error(409, "The person who set up Ribbon can’t be removed.");
       const result = removeUser(db, id, session.user.id, hid);
       return result.ok ? json({ ok: true }) : error(result.status, result.reason);
     }

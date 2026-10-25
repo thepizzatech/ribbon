@@ -199,6 +199,8 @@ export const exchangeHandler: Handler = async (c) => {
     if (budget === "bad") return error(400, "Budget should be a number.");
     const peek = input.organiserPeek !== undefined ? (input.organiserPeek === true ? 1 : 0) : ex.organiser_peek;
     if (peek === 1 && ex.organiser_peek === 0 && ex.organiser_user_id !== user.id) return error(403, "Only the organiser can turn on peeking.");
+    // Peeking is decided before the draw: switching it on afterwards would let the organiser read every pairing.
+    if (peek === 1 && ex.organiser_peek === 0 && ex.status === "drawn") return error(409, "Peeking has to be chosen before the draw. Start a new exchange to use it.");
     const avoid = input.avoidPrevious !== undefined ? (input.avoidPrevious === true ? 1 : 0) : ex.avoid_previous;
     db.prepare("UPDATE exchanges SET name = ?, event_date = ?, budget = ?, organiser_peek = ?, avoid_previous = ? WHERE id = ?").run(name, date, budget, peek, avoid, ex.id);
     return json({ exchange: viewExchange(db, getRow(db, ex.id)!, user) });

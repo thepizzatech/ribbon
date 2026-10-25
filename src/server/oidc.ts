@@ -5,7 +5,8 @@ import { oidcConfig, passwordLoginDisabled, publicUrl, type OidcConfig } from ".
 import { readCookie, sessionCookie } from "./cookies.ts";
 import type { Db } from "./db.ts";
 import { error, json, type Handler, type PublicHandler } from "./http.ts";
-import { isPrivateAddress, isSecureRequest, requestHost, requestScheme } from "./security.ts";
+import { throttle } from "./ratelimit.ts";
+import { clientAddress, isPrivateAddress, isSecureRequest, requestHost, requestScheme } from "./security.ts";
 import { createSession, getUser } from "./users.ts";
 
 const FLOW_MS = 10 * 60 * 1000;
@@ -50,12 +51,18 @@ async function discover(cfg: OidcConfig): Promise<Discovery> {
   if (cached && Date.now() - cached.at < 60 * 60 * 1000) return cached.meta;
   const problem = issuerProblem(cfg.issuer);
   if (problem) throw new Error(problem);
-  const response = await fetch(`${cfg.issuer}/.well-known/openid-configuration`, { signal: AbortSignal.timeout(10_000), headers: { accept: "application/json" } });
+  const response = await fetch(`${cfg.issuer}/.well-known/openid-configuration`, { signal: AbortSignal.timeout(10_000), redirect: "error", headers: { accept: "application/json" } });
   if (!response.ok) throw new Error(`Provider discovery failed (${response.status}).`);
   const meta = (await response.json()) as Discovery;
   if (meta.issuer?.replace(/\/+$/, "") !== cfg.issuer) throw new Error("The provider's issuer does not match OIDC_ISSUER.");
   for (const key of ["authorization_endpoint", "token_endpoint", "jwks_uri"] as const) {
     if (typeof meta[key] !== "string") throw new Error(`The provider's discovery document has no ${key}.`);
+  }
+  // Every endpoint the provider names must meet the same https rule as the issuer itself, so a hijacked
+  // discovery document can't point the server (or the browser) at an arbitrary plain-HTTP or internal address.
+  for (const key of ["authorization_endpoint", "token_endpoint", "jwks_uri", "userinfo_endpoint"] as const) {
+    const value = meta[key];
+    if (typeof value === "string" && issuerProblem(value)) throw new Error(`The provider's ${key} is not an https address.`);
   }
   discoveryCache.set(cfg.issuer, { at: Date.now(), meta });
   return meta;
@@ -102,7 +109,7 @@ async function exchange(cfg: OidcConfig, meta: Discovery, code: string, verifier
       form.set("client_secret", cfg.clientSecret);
     }
   } else form.set("client_id", cfg.clientId);
-  const response = await fetch(meta.token_endpoint, { method: "POST", headers, body: form, signal: AbortSignal.timeout(10_000) });
+  const response = await fetch(meta.token_endpoint, { method: "POST", headers, body: form, redirect: "error", signal: AbortSignal.timeout(10_000) });
   if (!response.ok) throw new Error(`Token exchange failed (${response.status}).`);
   return (await response.json()) as { id_token?: string; access_token?: string };
 }
@@ -153,6 +160,8 @@ export const oidcPublicHandler: PublicHandler = async (c) => {
   if (step === "start") {
     const link = c.url.searchParams.get("link") === "1";
     if (link && !c.session) return failure("session", secure);
+    // Each start writes a row and talks to the provider, so it gets a brake like every other open endpoint.
+    if (throttle(`oidc:start:${clientAddress(c.request)}`, 30, 15 * 60 * 1000) > 0) return failure("provider", secure, link);
     try {
       const meta = await discover(cfg);
       const state = b64url(randomBytes(24));
@@ -201,7 +210,7 @@ export const oidcPublicHandler: PublicHandler = async (c) => {
       if (!tokens.id_token) throw new Error("The provider returned no ID token.");
       const claims = await verifyIdToken(cfg, meta, tokens.id_token, row.nonce);
       if (!claims.email && meta.userinfo_endpoint && tokens.access_token) {
-        const info = await fetch(meta.userinfo_endpoint, { headers: { authorization: `Bearer ${tokens.access_token}` }, signal: AbortSignal.timeout(10_000) });
+        const info = await fetch(meta.userinfo_endpoint, { headers: { authorization: `Bearer ${tokens.access_token}` }, redirect: "error", signal: AbortSignal.timeout(10_000) });
         if (info.ok) {
           const profile = (await info.json()) as Claims;
           if (profile.sub === claims.sub) Object.assign(claims, { email: profile.email, email_verified: profile.email_verified });

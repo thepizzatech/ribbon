@@ -371,6 +371,7 @@ export function openDb(dir: string = dataDir(), options: { seed?: boolean } = {}
   const db = new DatabaseSync(join(dir, "ribbon.db"));
   db.exec("PRAGMA busy_timeout = 5000");
   db.exec("PRAGMA foreign_keys = ON");
+  db.exec("PRAGMA trusted_schema = OFF");
   migrate(db);
   if (options.seed ?? seedSampleData()) seedIfEmpty(db);
   return db;

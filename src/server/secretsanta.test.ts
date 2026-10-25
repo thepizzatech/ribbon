@@ -61,6 +61,7 @@ describe("secret santa visibility", () => {
     const f = family(db);
     const host = signedIn(db, { username: "host" }); // owner of the household, not a participant, no person
     const id = await setup(db, host);
+    const early = await setup(db, host); // a second exchange, where the organiser opts in to peek before drawing
     await call(db, "POST", `/api/exchanges/${id}/draw`, {}, host);
     const view = await mineOf(db, host, id);
     assert.equal(view.status, "drawn");
@@ -69,12 +70,14 @@ describe("secret santa visibility", () => {
     assert.equal(view.canManage, true);
     // other owners can manage but never peek
     assert.equal((await call(db, "PATCH", `/api/exchanges/${id}`, { organiserPeek: true }, f.avery)).status, 403);
-    // the organiser may turn peeking on explicitly
-    await call(db, "PATCH", `/api/exchanges/${id}`, { organiserPeek: true }, host);
-    const peek = await mineOf(db, host, id);
+    // the organiser may turn peeking on explicitly, but only before the draw (afterwards it is refused)
+    assert.equal((await call(db, "PATCH", `/api/exchanges/${id}`, { organiserPeek: true }, host)).status, 409);
+    assert.equal((await call(db, "PATCH", `/api/exchanges/${early}`, { organiserPeek: true }, host)).status, 200);
+    await call(db, "POST", `/api/exchanges/${early}/draw`, {}, host);
+    const peek = await mineOf(db, host, early);
     assert.equal(peek.assignments.length, 4);
     // the household's other owner still sees only their own
-    const averyView = await mineOf(db, f.avery, id);
+    const averyView = await mineOf(db, f.avery, early);
     assert.equal(averyView.assignments, undefined);
     assert.ok(averyView.mine);
     // members can't manage

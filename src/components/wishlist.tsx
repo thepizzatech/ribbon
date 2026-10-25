@@ -217,7 +217,7 @@ export function WishRow({
     <li className={`wish${taken ? " is-taken" : ""}`}>
       <div className="wish-main">
         <p className="wish-title">
-          {item.url ? (
+          {item.url && /^https?:\/\//i.test(item.url) ? (
             <a href={item.url} target="_blank" rel="noreferrer noopener">
               {item.title}
               <ExternalLink size={12} strokeWidth={1.75} aria-hidden="true" />

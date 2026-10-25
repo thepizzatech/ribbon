@@ -32,7 +32,16 @@ export function userForToken(db: Db, token: string): User | undefined {
   return row ? getUser(db, row.user_id) : undefined;
 }
 
-const escapeText = (value: string) => value.replace(/\\/g, "\\\\").replace(/;/g, "\\;").replace(/,/g, "\\,").replace(/\r?\n/g, "\\n");
+// Control characters (a bare CR, NUL, ...) are dropped first: a name with "\rATTENDEE:..." must not start a new iCalendar line.
+const escapeText = (value: string) =>
+  value
+    .replace(/\r\n|\r|\n/g, "\n")
+    // eslint-disable-next-line no-control-regex
+    .replace(/[\u0000-\u0009\u000b-\u001f\u007f\u2028\u2029]/g, "")
+    .replace(/\\/g, "\\\\")
+    .replace(/;/g, "\\;")
+    .replace(/,/g, "\\,")
+    .replace(/\n/g, "\\n");
 
 /** RFC 5545 folding: lines at most 75 octets, continuation lines start with a space. */
 function fold(line: string): string {

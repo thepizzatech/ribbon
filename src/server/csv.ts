@@ -20,7 +20,7 @@ import {
   type CsvType,
 } from "../lib/gifts/csv.ts";
 import { normalizeRelationship, relationshipLabel, type Person } from "../lib/gifts/model.ts";
-import { listWishlist } from "./wishlist.ts";
+import { listWishlist, safeUrl } from "./wishlist.ts";
 import type { User } from "./users.ts";
 
 const MAX_ROWS = 5000;
@@ -223,6 +223,12 @@ export function applyImport(ctx: Ctx, viewer: User, type: CsvType, analysis: Ana
         if (added.ok) result.added += 1;
         else result.failed.push({ line: row.line, reason: added.reason });
       } else if (type === "wishlist") {
+        // The same rule as the wishlist form: only real http(s) addresses, never javascript: or odd hosts.
+        const link = safeUrl(v.url);
+        if (link === null) {
+          result.failed.push({ line: row.line, reason: "That link doesn’t look like a web address." });
+          continue;
+        }
         const now = new Date().toISOString();
         const seq = (ctx.db.prepare("SELECT COALESCE(MAX(seq), 0) + 1 AS n FROM wishlist_items").get() as { n: number }).n;
         ctx.db
@@ -230,7 +236,7 @@ export function applyImport(ctx: Ctx, viewer: User, type: CsvType, analysis: Ana
             `INSERT INTO wishlist_items (id, household_id, person_id, seq, title, url, price, size, notes, priority, created_at, updated_at)
              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
           )
-          .run(randomUUID(), ctx.hid, v.personId as string, seq, v.title as string, /^https?:\/\//i.test(String(v.url)) || !v.url ? String(v.url) : `https://${v.url}`, v.price as number | null, v.size as string, v.notes as string, v.priority as number, now, now);
+          .run(randomUUID(), ctx.hid, v.personId as string, seq, v.title as string, link, v.price as number | null, v.size as string, v.notes as string, v.priority as number, now, now);
         result.added += 1;
       } else {
         const giverId = idFor(v.giverId, v.giver);

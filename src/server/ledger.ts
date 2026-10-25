@@ -254,6 +254,8 @@ export function updatePerson(ctx: Ctx, id: string, patch: unknown): Result<{ per
 
 export function removePerson(ctx: Ctx, id: string): Result {
   if (!getPerson(ctx, id)) return fail(404, "That person is gone.");
+  // Never answer "is on a gift" about yourself: for a login that would reveal a surprise planned for them.
+  if (ctx.me === id) return fail(409, "You can’t remove yourself from the ledger. Ask another owner.");
   const count = ctx.db.prepare("SELECT COUNT(*) AS n FROM people WHERE household_id = ?").get(ctx.hid) as { n: number };
   if (count.n <= 1) return fail(409, "Keep at least one person in the ledger.");
   if (ctx.db.prepare("SELECT 1 FROM gifts WHERE giver_id = ? OR receiver_id = ?").get(id, id)) {

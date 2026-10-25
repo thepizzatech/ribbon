@@ -61,7 +61,7 @@ export function viewItem(row: Row, viewer: Pick<User, "id" | "personId">): WishI
   };
 }
 
-function safeUrl(value: unknown): string | null {
+export function safeUrl(value: unknown): string | null {
   if (value === undefined || value === null || value === "") return "";
   if (typeof value !== "string") return null;
   const text = value.trim().slice(0, 500);

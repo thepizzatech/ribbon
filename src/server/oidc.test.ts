@@ -212,3 +212,32 @@ describe("OIDC sign-in", () => {
     assert.equal((await call(db, "POST", "/api/login", { username: "avery", password: "correct horse battery" })).status, 200);
   });
 });
+
+describe("hardening", () => {
+  test("starting sign-in is rate limited per address", async () => {
+    const db = freshDb();
+    let last: Response | undefined;
+    for (let i = 0; i < 31; i += 1) last = await handleApi(new Request(`${BASE}/api/auth/oidc/start`), db);
+    assert.equal(last!.status, 302);
+    assert.match(last!.headers.get("location")!, /sso_error=provider/);
+    assert.ok(!last!.headers.get("location")!.startsWith(provider.issuer), "no provider redirect once over the limit");
+  });
+
+  test("a discovery document that names a plain-HTTP public endpoint is refused", async () => {
+    const { createServer } = await import("node:http");
+    const server = createServer((req, res) => {
+      const self = `http://127.0.0.1:${(server.address() as { port: number }).port}`;
+      res.setHeader("content-type", "application/json");
+      res.end(JSON.stringify({ issuer: self, authorization_endpoint: `${self}/auth`, token_endpoint: "http://8.8.8.8/token", jwks_uri: `${self}/jwks` }));
+    });
+    await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+    try {
+      process.env.OIDC_ISSUER = `http://127.0.0.1:${(server.address() as { port: number }).port}`;
+      resetOidcCaches();
+      const start = await handleApi(new Request(`${BASE}/api/auth/oidc/start`), freshDb());
+      assert.match(start.headers.get("location")!, /sso_error=provider/);
+    } finally {
+      server.close();
+    }
+  });
+});

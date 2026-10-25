@@ -137,3 +137,164 @@ describe("sign-in lockout", () => {
     assert.equal(ok.status, 200);
   });
 });
+
+// ---------------------------------------------------------------------------------------------
+import { chmodSync, statSync, readFileSync, writeFileSync, copyFileSync } from "node:fs";
+import { DatabaseSync } from "node:sqlite";
+import { join } from "node:path";
+import { handleApi } from "./api.ts";
+import { backupDir } from "./backup.ts";
+import { tempDir } from "./test-helpers.ts";
+
+const PERSON = { name: "Kid", role: "Son", relationship: "son", circle: "household" };
+
+describe("request bodies", () => {
+  test("a chunked upload with no Content-Length is cut off at the size cap instead of being buffered", async () => {
+    const db = freshDb({ seed: false });
+    const chunk = new Uint8Array(1024 * 1024);
+    let sent = 0;
+    const stream = new ReadableStream<Uint8Array>({
+      pull(controller) {
+        if (sent >= 12) return controller.close();
+        sent += 1;
+        controller.enqueue(chunk);
+      },
+    });
+    const response = await handleApi(
+      new Request("http://localhost:8080/api/login", { method: "POST", headers: { "content-type": "application/json" }, body: stream, duplex: "half" } as RequestInit),
+      db,
+    );
+    assert.equal(response.status, 413);
+    assert.ok(sent < 12, `stopped reading after ${sent} MiB`);
+  });
+});
+
+describe("backups and restore", () => {
+  test("backup files are private on disk, and a backup with no owner login is refused", async () => {
+    const db = freshDb();
+    const admin = signedIn(db, { username: "avery", personId: "p-avery" });
+    const made = await call(db, "POST", "/api/backups", {}, admin);
+    const file = join(backupDir(db), made.body.backup.name);
+    assert.equal(statSync(file).mode & 0o077, 0, "no group/other access to a backup");
+    assert.equal(statSync(backupDir(db)).mode & 0o077, 0);
+
+    const stripped = join(tempDir(), "no-owner.db");
+    copyFileSync(file, stripped);
+    const conn = new DatabaseSync(stripped);
+    conn.exec("PRAGMA foreign_keys = OFF; DELETE FROM users; DELETE FROM sessions;");
+    conn.close();
+    const refused = await call(db, "POST", "/api/backups/restore-upload", new Uint8Array(readFileSync(stripped)), admin, { "content-type": "application/octet-stream", "x-confirm": "restore" });
+    assert.equal(refused.status, 400);
+    assert.match(refused.body.error, /no owner/);
+    assert.equal((await call(db, "GET", "/api/session", undefined, admin)).body.authed, true, "still signed in");
+  });
+
+  test("a restore file with a hostile view or trigger can't run code or pollute the live database", async () => {
+    const db = freshDb();
+    const admin = signedIn(db, { username: "avery", personId: "p-avery" });
+    const made = await call(db, "POST", "/api/backups", {}, admin);
+    const evil = join(tempDir(), "evil.db");
+    copyFileSync(join(backupDir(db), made.body.backup.name), evil);
+    const conn = new DatabaseSync(evil);
+    conn.exec("CREATE VIEW sneaky AS SELECT load_extension('x') AS y");
+    conn.exec("CREATE TRIGGER sneaky_t AFTER INSERT ON gifts BEGIN DELETE FROM users; END");
+    conn.close();
+    const result = await call(db, "POST", "/api/backups/restore-upload", new Uint8Array(readFileSync(evil)), admin, { "content-type": "application/octet-stream", "x-confirm": "restore" });
+    assert.equal(result.status, 200);
+    const names = (db.prepare("SELECT name FROM sqlite_master WHERE name LIKE 'sneaky%'").all() as { name: string }[]).length;
+    assert.equal(names, 0, "views and triggers from an uploaded file are never copied in");
+    assert.equal((await call(db, "GET", "/api/session", undefined, admin)).body.authed, true);
+  });
+});
+
+describe("the person who set up Ribbon", () => {
+  test("another owner can't demote or remove them (which would hand over every household's backups)", async () => {
+    const db = freshDb();
+    const first = signedIn(db, { username: "avery", personId: "p-avery" });
+    const second = signedIn(db, { username: "jordan", personId: "p-jordan" });
+    const demote = await call(db, "PATCH", `/api/users/${first.id}`, { role: "member" }, second);
+    assert.equal(demote.status, 409);
+    const remove = await call(db, "DELETE", `/api/users/${first.id}`, undefined, second);
+    assert.equal(remove.status, 409);
+    assert.equal((await call(db, "GET", "/api/backups", undefined, second)).status, 403);
+    assert.equal((await call(db, "GET", "/api/backups", undefined, first)).status, 200);
+    // the second owner is an ordinary owner: they can still be demoted
+    assert.equal((await call(db, "PATCH", `/api/users/${second.id}`, { role: "member" }, first)).status, 200);
+  });
+});
+
+describe("secret santa", () => {
+  test("the organiser can't switch peeking on after the names are drawn", async () => {
+    const db = freshDb();
+    const avery = signedIn(db, { username: "avery", personId: "p-avery" });
+    for (const [name, person] of [["jordan", "p-jordan"], ["noah", "p-noah"], ["june", "p-june"]] as const) signedIn(db, { username: name, role: "member", personId: person });
+    const made = await call(db, "POST", "/api/exchanges", { name: "Santa", date: "2026-12-20", budget: 25 }, avery);
+    const id = made.body.exchange.id as string;
+    await call(db, "PUT", `/api/exchanges/${id}/participants`, { personIds: ["p-jordan", "p-noah", "p-june"] }, avery);
+    assert.equal((await call(db, "POST", `/api/exchanges/${id}/draw`, {}, avery)).status, 200);
+    const late = await call(db, "PATCH", `/api/exchanges/${id}`, { organiserPeek: true }, avery);
+    assert.equal(late.status, 409);
+    const view = (await call(db, "GET", `/api/exchanges/${id}`, undefined, avery)).body.exchange;
+    assert.equal(view.assignments, undefined);
+    // before the draw it is still allowed
+    const other = await call(db, "POST", "/api/exchanges", { name: "Santa 2", date: "2026-12-21", budget: 25 }, avery);
+    assert.equal((await call(db, "PATCH", `/api/exchanges/${other.body.exchange.id}`, { organiserPeek: true }, avery)).status, 200);
+  });
+});
+
+describe("wishlist links and calendar text", () => {
+  test("CSV-imported wishlist links follow the same rule as the form", async () => {
+    const db = freshDb();
+    const me = signedIn(db, { username: "avery", personId: "p-avery" });
+    const text = "person,item,link\nNoah Cole,Good,example.com/bike\nNoah Cole,Bad,https://javascript:alert(1).x\nNoah Cole,Worse,javascript:alert(1)\n";
+    const done = (await call(db, "POST", "/api/csv/import", { type: "wishlist", text }, me)).body;
+    assert.equal(done.added, 1);
+    assert.equal(done.invalid + done.failed.length, 2, "both bad links are refused, one at preview and one at insert");
+    const items = (await call(db, "GET", "/api/wishlist?personId=p-noah", undefined, me)).body.items as { url: string }[];
+    for (const item of items) assert.match(item.url, /^https?:\/\//);
+  });
+
+  test("a person's name can't inject calendar lines with a bare carriage return", async () => {
+    const db = freshDb();
+    const me = signedIn(db, { username: "avery", personId: "p-avery" });
+    const added = await call(db, "POST", "/api/people", { ...PERSON, name: "Kid\rATTENDEE:mailto:evil@example.com\u0000", birthday: "2015-03-03" }, me);
+    assert.equal(added.status, 201);
+    const token = (await call(db, "POST", "/api/calendar/token", {}, me)).body.token as string;
+    const ics = (await call(db, "GET", `/api/calendar/${token}.ics`)).text;
+    assert.ok(!/\rATTENDEE/.test(ics.replace(/\r\n/g, "\n")), "no injected property line");
+    assert.ok(!ics.split(/\r\n/).some((line) => line.startsWith("ATTENDEE")));
+    assert.ok(!ics.includes("\u0000"));
+  });
+});
+
+describe("small oracles", () => {
+  test("removing yourself from the ledger never reveals whether a surprise is planned for you", async () => {
+    const db = freshDb();
+    const owner = signedIn(db, { username: "avery", personId: "p-avery" });
+    const noah = signedIn(db, { username: "noah", role: "member", personId: "p-noah" });
+    const surprise = await call(db, "POST", "/api/gifts", { direction: "given", title: "Surprise", occasion: "Birthday", date: "2026-12-01", giverId: "p-avery", receiverId: "p-noah", amount: 10, status: "idea", thanked: false, note: "" }, owner);
+    assert.equal(surprise.status, 201);
+    const withSurprise = await call(db, "DELETE", "/api/people/p-noah", undefined, noah);
+    assert.equal(withSurprise.status, 409);
+    assert.doesNotMatch(withSurprise.body.error, /gift/i);
+    const june = signedIn(db, { username: "june", role: "member", personId: "p-june" });
+    const without = await call(db, "DELETE", "/api/people/p-june", undefined, june);
+    assert.equal(without.status, withSurprise.status);
+    assert.equal(without.body.error, withSurprise.body.error);
+  });
+
+  test("a passkey id with broken percent-encoding is a 400, not a crash", async () => {
+    const db = freshDb();
+    const me = signedIn(db, { username: "avery", personId: "p-avery" });
+    assert.equal((await call(db, "DELETE", "/api/me/passkeys/%E0%A4%A", undefined, me)).status, 400);
+  });
+});
+
+import { pathIsWellFormed } from "../../server/plugins/path-guard.ts";
+
+describe("path guard", () => {
+  test("paths with broken percent-encoding are rejected before the router sees them", () => {
+    for (const bad of ["http://x/%E0%A4%A", "http://x/api/%ZZ", "http://x/assets/%C0%AF%"]) assert.equal(pathIsWellFormed(bad), false, bad);
+    for (const good of ["http://x/", "http://x/api/gifts/a%20b", "http://x/%F0%9F%8E%81", "http://x/api/me?x=%ZZ"]) assert.equal(pathIsWellFormed(good), true, good);
+  });
+});

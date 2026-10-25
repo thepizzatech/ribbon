@@ -1,13 +1,13 @@
 // Scheduled and manual SQLite backups, listing, download, and restore.
 import { DatabaseSync } from "node:sqlite";
-import { closeSync, existsSync, mkdirSync, openSync, readSync, readdirSync, renameSync, rmSync, statSync, writeFileSync, createReadStream } from "node:fs";
+import { chmodSync, closeSync, existsSync, mkdirSync, openSync, readSync, readdirSync, renameSync, rmSync, statSync, writeFileSync, createReadStream } from "node:fs";
 import { basename, dirname, join } from "node:path";
 import { randomBytes } from "node:crypto";
 import { Readable } from "node:stream";
 import { backupCron, backupKeep } from "./config.ts";
 import { cronMatches, nextRun, parseCron } from "./cron.ts";
 import { MIGRATIONS, migrate, type Db } from "./db.ts";
-import { error, json, type Handler } from "./http.ts";
+import { error, json, readCapped, type Handler } from "./http.ts";
 import type { User } from "./users.ts";
 
 export type BackupKind = "auto" | "manual" | "pre-restore";
@@ -35,11 +35,12 @@ const stamp = (d: Date) => {
 /** A consistent copy of the live database, written with VACUUM INTO. */
 export function createBackup(db: Db, kind: BackupKind, now = new Date()): BackupFile {
   const dir = backupDir(db);
-  mkdirSync(dir, { recursive: true });
+  mkdirSync(dir, { recursive: true, mode: 0o700 });
   let name = `${kind}-${stamp(now)}.db`;
   for (let n = 2; existsSync(join(dir, name)); n += 1) name = `${kind}-${stamp(now)}-${n}.db`;
   const tmp = join(dir, `.tmp-${randomBytes(4).toString("hex")}`);
   db.exec(`VACUUM INTO '${tmp.replaceAll("'", "''")}'`);
+  chmodSync(tmp, 0o600); // backups hold every household's data: owner-only on disk
   renameSync(tmp, join(dir, name));
   if (kind === "auto") pruneAuto(db, backupKeep());
   if (kind === "pre-restore") pruneKind(db, "pre-restore", 5);
@@ -114,6 +115,8 @@ export function openBackupForRestore(path: string): { ok: true; conn: DatabaseSy
     }
     if (header.toString("latin1") !== "SQLite format 3\u0000") return { ok: false, reason: "That isn’t a Ribbon backup (not an SQLite file)." };
     conn = new DatabaseSync(path);
+    // An uploaded file is untrusted: never run SQL functions that a crafted view, trigger or default might call.
+    conn.exec("PRAGMA trusted_schema = OFF");
     const check = conn.prepare("PRAGMA integrity_check").get() as { integrity_check: string };
     if (check.integrity_check !== "ok") throw new Error("The file is damaged (integrity check failed).");
     const tables = new Set((conn.prepare("SELECT name FROM sqlite_master WHERE type = 'table'").all() as { name: string }[]).map((t) => t.name));
@@ -122,6 +125,8 @@ export function openBackupForRestore(path: string): { ok: true; conn: DatabaseSy
     const ours = Math.max(...MIGRATIONS.map((m) => m.id));
     if (newest > ours) throw new Error("That backup comes from a newer Ribbon. Update Ribbon first, then restore.");
     migrate(conn);
+    const owners = (conn.prepare("SELECT COUNT(*) AS n FROM users WHERE role = 'owner'").get() as { n: number }).n;
+    if (owners === 0) throw new Error("That backup has no owner login, so restoring it would lock everyone out.");
     return { ok: true, conn };
   } catch (err) {
     try {
@@ -244,13 +249,13 @@ export const backupsHandler: Handler = async (c) => {
     if (c.request.headers.get("x-confirm")?.toLowerCase() !== "restore") return error(400, "Confirm the restore first.");
     const length = Number(c.request.headers.get("content-length") ?? 0);
     if (length > MAX_UPLOAD) return error(413, "That file is too large.");
-    const bytes = new Uint8Array(await c.request.arrayBuffer());
+    const bytes = await readCapped(c.request, MAX_UPLOAD);
+    if (!bytes) return error(413, "That file is too large.");
     if (bytes.length === 0) return error(400, "No file was sent.");
-    if (bytes.length > MAX_UPLOAD) return error(413, "That file is too large.");
     const dir = backupDir(db);
-    mkdirSync(dir, { recursive: true });
+    mkdirSync(dir, { recursive: true, mode: 0o700 });
     const tmp = join(dir, `.upload-${randomBytes(6).toString("hex")}`);
-    writeFileSync(tmp, bytes);
+    writeFileSync(tmp, bytes, { mode: 0o600 });
     try {
       const result = restoreFrom(db, tmp);
       if (!result.ok) return error(result.status, result.reason);
