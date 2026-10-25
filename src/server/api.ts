@@ -4,12 +4,14 @@
 import { randomUUID } from "node:crypto";
 import type { Person } from "../lib/gifts/model.ts";
 import { passwordLoginDisabled, seedSampleData, setupCode } from "./config.ts";
+import { createHash, timingSafeEqual } from "node:crypto";
 import { clearCookies, readSessionToken, sessionCookie } from "./cookies.ts";
 import { getDb, type Db } from "./db.ts";
 import { error, json, readJson, decode, type ApiCall, type Handler, type PublicCall, type PublicHandler } from "./http.ts";
 import { ledgerHandler } from "./routes-ledger.ts";
-import { burnPasswordCheck, hashPassword, passwordProblem, verifyPassword } from "./password.ts";
-import { clientAddress, insecureLoginReason, isPrivateAddress, isSecureRequest, originAllowed } from "./security.ts";
+import { burnUnlessHash, hashPassword, passwordNeedsRehash, passwordProblem, verifyPassword } from "./password.ts";
+import { throttle } from "./ratelimit.ts";
+import { clientAddress, insecureLoginReason, isPrivateAddress, isSecureRequest, originAllowed, setupRefusedReason } from "./security.ts";
 import {
   clearMisses,
   createSession,
@@ -51,6 +53,8 @@ export function sessionPayload(db: Db, session: Session | null, request: Request
     hasLedger,
     householdName: setupRequired && hasLedger && firstHid ? (householdRow(db, firstHid)?.name ?? null) : null,
     setupCodeRequired: setupRequired && Boolean(setupCode()),
+    // Set when the first owner can't be created from this connection (no SETUP_CODE and not on the home network).
+    setupBlocked: setupRequired ? setupRefusedReason(request) : null,
     secure: isSecureRequest(request),
     insecureLoginBlocked: insecureLoginReason(request),
     privateNetwork: isPrivateAddress(clientAddress(request)),
@@ -178,8 +182,12 @@ const RAW_BODY = new Set(["backups/restore-upload"]);
 async function setup(store: Db, request: Request, secure: boolean): Promise<Response> {
   void secure;
   if (userCount(store) > 0) return error(409, "Ribbon is already set up. Sign in instead.");
-  const refused = insecureLoginReason(request);
+  const refused = insecureLoginReason(request) ?? setupRefusedReason(request);
   if (refused) return error(403, refused);
+  // A guessable setup code is only as good as the brake on guessing it.
+  if (throttle(`setup:${clientAddress(request)}`, 10, 15 * 60 * 1000) > 0) {
+    return error(429, "Too many tries. Wait a few minutes and try again.");
+  }
   const parsed = await readJson(request);
   if (!parsed.ok) return parsed.response;
   const body = (parsed.value ?? {}) as {
@@ -191,7 +199,7 @@ async function setup(store: Db, request: Request, secure: boolean): Promise<Resp
     password?: unknown;
   };
   const code = setupCode();
-  if (code && (typeof body.setupCode !== "string" || body.setupCode.trim() !== code)) {
+  if (code && (typeof body.setupCode !== "string" || !sameSecret(body.setupCode.trim(), code))) {
     return error(403, "That setup code is not right.");
   }
   const username = normalizeUsername(body.username);
@@ -229,6 +237,13 @@ async function setup(store: Db, request: Request, secure: boolean): Promise<Resp
   return startSessionWith(store, owner.id, request, 201);
 }
 
+/** Constant-time comparison (both sides are hashed first so their lengths don't leak). */
+function sameSecret(given: string, expected: string): boolean {
+  const a = createHash("sha256").update(given).digest();
+  const b = createHash("sha256").update(expected).digest();
+  return timingSafeEqual(a, b);
+}
+
 function startSessionWith(store: Db, userId: string, request: Request, status = 200): Response {
   const made = createSession(store, userId);
   const fresh = readSession(store, made.token);
@@ -255,14 +270,17 @@ async function login(store: Db, request: Request): Promise<Response> {
   }
   const row = username === "invalid" ? undefined : findUserByName(store, username);
   const password = typeof body.password === "string" ? body.password.slice(0, 400) : "";
-  const hash = row && row.password_hash;
-  const ok = hash ? await verifyPassword(password, hash) : (await burnPasswordCheck(password), false);
+  const hash = row?.password_hash;
+  // Unknown names and single-sign-on-only logins ("!") burn one hash too, so timing doesn't tell them apart.
+  const ok = await burnUnlessHash(password, hash);
   if (!row || !ok) {
     recordMiss(username, address);
     await new Promise((resolve) => setTimeout(resolve, 300));
     return error(401, "Incorrect username or password.");
   }
   clearMisses(username, address);
+  // Hashes made with older, cheaper settings are upgraded now that the plaintext is in hand.
+  if (hash && passwordNeedsRehash(hash)) setPasswordHash(store, row.id, await hashPassword(password));
   return startSessionWith(store, row.id, request);
 }
 

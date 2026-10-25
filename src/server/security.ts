@@ -1,7 +1,7 @@
 // Proxy trust, the effective request scheme/host/client address, security headers, the insecure-login
 // guard, and same-origin checks. Pure functions, used by the Nitro middleware and by the API.
 import { BlockList, isIP } from "node:net";
-import { allowInsecureLogin, enforceHttps, hstsEnabled, isProduction, publicUrl, trustedProxies, DEFAULT_TRUSTED_PROXIES } from "./config.ts";
+import { allowInsecureLogin, allowPublicSetup, setupCode, enforceHttps, hstsEnabled, isProduction, publicUrl, trustedProxies, DEFAULT_TRUSTED_PROXIES } from "./config.ts";
 
 /** Header the Nitro middleware stamps with the real socket address (client-sent copies are discarded). */
 export const PEER_HEADER = "x-ribbon-peer";
@@ -119,6 +119,17 @@ export function insecureLoginReason(request: Request): string | null {
   return "Sign-in over plain HTTP is only allowed from your home network. Open Ribbon through its HTTPS address.";
 }
 
+/**
+ * Why the first owner account can't be created from this connection, or null when it can. Until an owner
+ * exists anyone who can reach the server could claim it, so without a SETUP_CODE only the home network
+ * may do it (ALLOW_PUBLIC_SETUP=true lifts that for people who accept the risk).
+ */
+export function setupRefusedReason(request: Request): string | null {
+  if (setupCode() || allowPublicSetup()) return null;
+  if (isPrivateAddress(clientAddress(request))) return null;
+  return "Ribbon has no owner yet, and this connection isn’t on your home network. Set SETUP_CODE on the server (then enter it here) or finish setup from your home network. Anyone who reached this page could otherwise claim the account.";
+}
+
 const CSP = [
   "default-src 'self'",
   "script-src 'self' 'unsafe-inline'",
@@ -144,6 +155,7 @@ export function securityHeaders(request: Request): Record<string, string> {
     "x-frame-options": "DENY",
     "permissions-policy": "camera=(), microphone=(), geolocation=()",
     "cross-origin-opener-policy": "same-origin",
+    "cross-origin-resource-policy": "same-origin",
   };
   if (hstsEnabled() && isSecureRequest(request)) headers["strict-transport-security"] = HSTS_VALUE;
   return headers;

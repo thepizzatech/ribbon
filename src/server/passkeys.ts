@@ -13,12 +13,15 @@ import {
 } from "@simplewebauthn/server";
 import { publicUrl } from "./config.ts";
 import type { Db } from "./db.ts";
-import { error, json, readJson, type Handler, type PublicHandler } from "./http.ts";
+import { decode, error, json, readJson, type Handler, type PublicHandler } from "./http.ts";
+import { forget, hit, throttle, waitFor } from "./ratelimit.ts";
 import { clientAddress, requestHost, requestScheme } from "./security.ts";
-import { clearMisses, getUser, lockedFor, recordMiss } from "./users.ts";
+import { getUser } from "./users.ts";
 
 const CHALLENGE_MS = 5 * 60 * 1000;
 const MAX_PASSKEYS = 10;
+const MAX_OPEN_CHALLENGES = 500;
+const WINDOW_MS = 15 * 60 * 1000;
 
 /** Relying party: the host (without port) people see, and the exact origin the browser reports. */
 export function relyingParty(request: Request): { rpID: string; origin: string; name: string } {
@@ -42,6 +45,8 @@ export function relyingParty(request: Request): { rpID: string; origin: string; 
 function saveChallenge(db: Db, kind: "register" | "login", challenge: string, userId: string | null): string {
   const id = randomBytes(18).toString("base64url");
   db.prepare("DELETE FROM webauthn_challenges WHERE created_at < ?").run(Date.now() - CHALLENGE_MS);
+  // Anyone can ask for sign-in options, so the table is capped: the oldest open challenges go first.
+  db.prepare("DELETE FROM webauthn_challenges WHERE id IN (SELECT id FROM webauthn_challenges ORDER BY created_at DESC LIMIT -1 OFFSET ?)").run(MAX_OPEN_CHALLENGES - 1);
   db.prepare("INSERT INTO webauthn_challenges (id, kind, user_id, challenge, created_at) VALUES (?, ?, ?, ?, ?)").run(id, kind, userId, challenge, Date.now());
   return id;
 }
@@ -75,7 +80,10 @@ export const passkeyPublicHandler: PublicHandler = async (c) => {
   const rp = relyingParty(c.request);
 
   if (c.method === "GET" && c.rest[0] === "options") {
-    const options = await generateAuthenticationOptions({ rpID: rp.rpID, userVerification: "preferred", timeout: 120_000 });
+    const wait = throttle(`passkey:options:${clientAddress(c.request)}`, 60, WINDOW_MS);
+    if (wait > 0) return error(429, "Too many tries. Wait a few minutes and try again.");
+    // A passkey replaces the password, so it must prove the person was there too (PIN, fingerprint or face).
+    const options = await generateAuthenticationOptions({ rpID: rp.rpID, userVerification: "required", timeout: 120_000 });
     return json({ options, challengeId: saveChallenge(c.db, "login", options.challenge, null) });
   }
 
@@ -84,11 +92,12 @@ export const passkeyPublicHandler: PublicHandler = async (c) => {
     if (!parsed.ok) return parsed.response;
     const body = (parsed.value ?? {}) as { challengeId?: unknown; response?: AuthenticationResponseJSON };
     const address = clientAddress(c.request);
-    if (lockedFor("passkey", address) > 0) return error(429, "Too many tries. Wait a few minutes and try again.");
+    const missKey = `passkey:miss:${address}`;
+    if (waitFor(missKey, 20) > 0) return error(429, "Too many tries. Wait a few minutes and try again.");
     const challenge = takeChallenge(c.db, body.challengeId, "login", null);
     const response = body.response;
     const fail = () => {
-      recordMiss("passkey", address);
+      hit(missKey, WINDOW_MS);
       return error(401, "That passkey didn’t work. Try again, or use your password.");
     };
     if (!challenge || !response || typeof response.id !== "string") return fail();
@@ -100,7 +109,7 @@ export const passkeyPublicHandler: PublicHandler = async (c) => {
         expectedChallenge: challenge,
         expectedOrigin: rp.origin,
         expectedRPID: rp.rpID,
-        requireUserVerification: false,
+        requireUserVerification: true,
         credential: { id: row.id, publicKey: new Uint8Array(row.public_key), counter: row.counter, transports: toTransports(row.transports) },
       });
       if (!result.verified) return fail();
@@ -109,7 +118,7 @@ export const passkeyPublicHandler: PublicHandler = async (c) => {
       console.error("[ribbon] passkey sign-in failed:", err instanceof Error ? err.message : err);
       return fail();
     }
-    clearMisses("passkey", address);
+    forget(missKey);
     // loaded lazily: api.ts imports this module through features.ts
     const { startSession } = await import("./api.ts");
     return startSession(c.db, row.user_id, c.request);
@@ -135,7 +144,7 @@ export const passkeyHandler: Handler = async (c) => {
       userID: new TextEncoder().encode(user.id),
       attestationType: "none",
       excludeCredentials: existing.map((e) => ({ id: e.id, transports: toTransports(e.transports) })),
-      authenticatorSelection: { residentKey: "preferred", userVerification: "preferred" },
+      authenticatorSelection: { residentKey: "preferred", userVerification: "required" },
       timeout: 120_000,
     });
     return json({ options, challengeId: saveChallenge(c.db, "register", options.challenge, user.id) });
@@ -151,7 +160,7 @@ export const passkeyHandler: Handler = async (c) => {
         expectedChallenge: challenge,
         expectedOrigin: rp.origin,
         expectedRPID: rp.rpID,
-        requireUserVerification: false,
+        requireUserVerification: true,
       });
       if (!result.verified || !result.registrationInfo) return error(400, "That passkey couldn’t be verified.");
       const { credential, credentialDeviceType, credentialBackedUp } = result.registrationInfo;
@@ -171,7 +180,8 @@ export const passkeyHandler: Handler = async (c) => {
   }
 
   if (c.method === "DELETE" && c.rest.length === 1) {
-    const credId = decodeURIComponent(c.rest[0]!);
+    const credId = decode(c.rest[0]!);
+    if (credId === null) return error(400, "Bad id in the address.");
     const mine = c.db.prepare("SELECT 1 FROM webauthn_credentials WHERE id = ? AND user_id = ?").get(credId, user.id);
     if (!mine) return error(404, "That passkey is gone.");
     const count = listPasskeys(c.db, user.id).length;

@@ -67,6 +67,12 @@ export function setupCode(): string | undefined {
   return process.env.SETUP_CODE?.trim() || undefined;
 }
 
+/** Lets the very first owner be created from a public address without a SETUP_CODE (off by default). */
+export function allowPublicSetup(): boolean {
+  const value = process.env.ALLOW_PUBLIC_SETUP?.trim().toLowerCase();
+  return value === "true" || value === "1" || value === "yes" || value === "on";
+}
+
 export function isProduction(): boolean {
   return process.env.NODE_ENV === "production";
 }

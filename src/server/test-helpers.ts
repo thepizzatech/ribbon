@@ -1,3 +1,4 @@
+import { resetRateLimits } from "./ratelimit.ts";
 // Shared helpers for the server tests (not itself a test file).
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -18,6 +19,7 @@ export function tempDir() {
 }
 
 export function freshDb(options: { dir?: string; seed?: boolean } = {}) {
+  resetRateLimits(); // each test starts with a clean slate of in-memory brakes
   const db = openDb(options.dir ?? tempDir(), { seed: options.seed ?? true });
   dbs.push(db);
   return db;

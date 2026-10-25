@@ -489,7 +489,7 @@ describe("accounts and sessions", () => {
   test("passwords are stored as scrypt hashes, never in clear", async () => {
     const { db } = await ready();
     const row = db.prepare("SELECT password_hash FROM users WHERE username = 'owner'").get() as { password_hash: string };
-    assert.match(row.password_hash, /^scrypt\$32768\$8\$1\$/);
+    assert.match(row.password_hash, /^scrypt\$65536\$8\$2\$/);
     assert.ok(!row.password_hash.includes("a-long-enough-password"));
     const session = db.prepare("SELECT id FROM sessions").get() as { id: string };
     assert.match(session.id, /^[0-9a-f]{64}$/); // only a hash of the token is stored

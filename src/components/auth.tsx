@@ -190,6 +190,11 @@ export function SetupFlow({ session, onDone }: { session: Session; onDone: (sess
       }
     >
       <InsecureNotice session={session} />
+      {session.setupBlocked ? (
+        <p className="auth-warn" role="alert">
+          {session.setupBlocked}
+        </p>
+      ) : null}
       <form className="auth-form" onSubmit={finish}>
         <Field label="Username or email">
           <TextInput
@@ -217,7 +222,7 @@ export function SetupFlow({ session, onDone }: { session: Session; onDone: (sess
             {message}
           </p>
         ) : null}
-        <Button type="submit" block disabled={busy || !username.trim() || !password}>
+        <Button type="submit" block disabled={busy || !username.trim() || !password || Boolean(session.setupBlocked)}>
           {busy ? "Creating…" : "Create account"}
         </Button>
       </form>

@@ -3,6 +3,7 @@ import { createHash, randomBytes, randomUUID, timingSafeEqual } from "node:crypt
 import { devAccount, isProduction, seedSampleData } from "./config.ts";
 import type { Db } from "./db.ts";
 import { hashPasswordSync } from "./password.ts";
+import { forget, hit, resetRateLimits, waitFor } from "./ratelimit.ts";
 
 export type Role = "owner" | "member";
 export type User = {
@@ -206,46 +207,45 @@ export function csrfMatches(expected: string, given: string | null): boolean {
   return a.length === b.length && timingSafeEqual(a, b);
 }
 
-// ---- lockout (in memory: 5 misses per account or 20 per address in 15 minutes) ----
+// ---- lockout (in memory) ----
+// Three brakes on password guessing, so one of them being dodged is not enough:
+//   - 5 misses for one account from one address in 15 minutes;
+//   - 20 misses for one account from anywhere (this is what stops a guesser who rotates addresses or
+//     forges X-Forwarded-For through a trusted proxy). It can briefly lock the real owner out, which is
+//     the safer failure; the 15 minutes pass on their own;
+//   - 30 misses from one address across all accounts (spraying one password at many usernames).
 
 const WINDOW_MS = 15 * 60 * 1000;
-const ACCOUNT_LIMIT = 5;
-const ADDRESS_LIMIT = 20;
-const misses = new Map<string, { count: number; since: number }>();
+const PAIR_LIMIT = 5;
+const ACCOUNT_LIMIT = 20;
+const ADDRESS_LIMIT = 30;
 
-function bucket(key: string, now: number) {
-  const entry = misses.get(key);
-  return entry && now - entry.since <= WINDOW_MS ? entry : null;
-}
+const keys = (username: string, address: string) =>
+  [
+    [`login:pair:${username}|${address}`, PAIR_LIMIT],
+    [`login:user:${username}`, ACCOUNT_LIMIT],
+    [`login:addr:${address}`, ADDRESS_LIMIT],
+  ] as const;
 
 /** Seconds until another attempt is allowed, or 0. */
 export function lockedFor(username: string, address: string, now = Date.now()): number {
   let wait = 0;
-  for (const [key, limit] of [
-    [`u:${username}`, ACCOUNT_LIMIT],
-    [`a:${address}`, ADDRESS_LIMIT],
-  ] as const) {
-    const entry = bucket(key, now);
-    if (entry && entry.count >= limit) wait = Math.max(wait, Math.ceil((entry.since + WINDOW_MS - now) / 1000));
-  }
+  for (const [key, limit] of keys(username, address)) wait = Math.max(wait, waitFor(key, limit, now));
   return wait;
 }
 
 export function recordMiss(username: string, address: string, now = Date.now()) {
-  for (const key of [`u:${username}`, `a:${address}`]) {
-    const entry = bucket(key, now);
-    if (entry) entry.count += 1;
-    else misses.set(key, { count: 1, since: now });
-  }
+  for (const [key] of keys(username, address)) hit(key, WINDOW_MS, now);
 }
 
 export function clearMisses(username: string, address: string) {
-  misses.delete(`u:${username}`);
-  void address; // address misses age out on their own so one good login can't reset a guessing run
+  // Only this address's run against this account is forgiven; the account-wide and address-wide
+  // counters age out on their own so one good login can't reset a guessing run.
+  forget(`login:pair:${username}|${address}`);
 }
 
 export function resetLockouts() {
-  misses.clear();
+  resetRateLimits();
 }
 
 // ---- development account ----

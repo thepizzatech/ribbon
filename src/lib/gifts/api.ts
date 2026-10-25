@@ -79,6 +79,8 @@ export type Session = {
   hasLedger: boolean;
   householdName: string | null;
   setupCodeRequired: boolean;
+  /** Why the first owner can't be created from this connection (no SETUP_CODE and not on the home network), or null. */
+  setupBlocked: string | null;
   /** The connection looks like HTTPS to the server (directly or through a trusted proxy). */
   secure: boolean;
   /** Set when password sign-in is refused from this connection (plain HTTP from outside the home network). */
