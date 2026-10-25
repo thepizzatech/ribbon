@@ -4,6 +4,8 @@ import { DatabaseSync } from "node:sqlite";
 import { mkdirSync } from "node:fs";
 import { join } from "node:path";
 import { DEFAULT_OCCASIONS, SEED_GIFTS, SEED_PEOPLE } from "../lib/gifts/model.ts";
+import { seedSampleData } from "./config.ts";
+import { ensureDevAccount } from "./users.ts";
 
 export type Db = DatabaseSync;
 
@@ -51,6 +53,43 @@ export const MIGRATIONS: Migration[] = [
       CREATE INDEX gifts_receiver ON gifts (receiver_id);
     `,
   },
+  {
+    id: 2,
+    name: "accounts, sessions, relationships",
+    sql: `
+      CREATE TABLE users (
+        id TEXT PRIMARY KEY,
+        username TEXT NOT NULL UNIQUE COLLATE NOCASE,
+        display_name TEXT NOT NULL,
+        role TEXT NOT NULL CHECK (role IN ('owner', 'member')),
+        password_hash TEXT NOT NULL,
+        created_at TEXT NOT NULL
+      );
+      CREATE TABLE sessions (
+        id TEXT PRIMARY KEY,
+        user_id TEXT NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+        csrf_token TEXT NOT NULL,
+        created_at INTEGER NOT NULL,
+        expires_at INTEGER NOT NULL,
+        last_seen_at INTEGER NOT NULL
+      );
+      CREATE INDEX sessions_user ON sessions (user_id);
+      ALTER TABLE people ADD COLUMN relationship TEXT NOT NULL DEFAULT 'other';
+      UPDATE people SET relationship = CASE lower(trim(role))
+        WHEN 'you' THEN 'self' WHEN 'me' THEN 'self' WHEN 'self' THEN 'self'
+        WHEN 'partner' THEN 'partner' WHEN 'spouse' THEN 'partner'
+        WHEN 'wife' THEN 'wife' WHEN 'husband' THEN 'husband'
+        WHEN 'son' THEN 'son' WHEN 'daughter' THEN 'daughter'
+        WHEN 'mother' THEN 'mother' WHEN 'mom' THEN 'mother' WHEN 'mum' THEN 'mother'
+        WHEN 'father' THEN 'father' WHEN 'dad' THEN 'father'
+        WHEN 'brother' THEN 'brother' WHEN 'sister' THEN 'sister'
+        WHEN 'grandmother' THEN 'grandmother' WHEN 'grandma' THEN 'grandmother'
+        WHEN 'grandfather' THEN 'grandfather' WHEN 'grandpa' THEN 'grandfather'
+        WHEN 'aunt' THEN 'aunt' WHEN 'uncle' THEN 'uncle' WHEN 'cousin' THEN 'cousin'
+        WHEN 'friend' THEN 'friend'
+        ELSE 'other' END;
+    `,
+  },
 ];
 
 export function dataDir(): string {
@@ -93,14 +132,14 @@ export function migrate(db: Db): number[] {
   return applied;
 }
 
-/** A brand-new database starts with the same sample household the app always opened with. */
+/** With SEED_SAMPLE_DATA on, a brand-new database starts with the sample household (development). */
 function seedIfEmpty(db: Db) {
   const row = db.prepare("SELECT id FROM household WHERE id = 1").get();
   if (row) return;
   transaction(db, () => {
     db.prepare("INSERT INTO household (id, name, demo, demo_dismissed) VALUES (1, ?, 1, 0)").run("The Coles");
-    const person = db.prepare("INSERT INTO people (id, seq, name, role, circle) VALUES (?, ?, ?, ?, ?)");
-    SEED_PEOPLE.forEach((p, i) => person.run(p.id, i + 1, p.name, p.role, p.circle));
+    const person = db.prepare("INSERT INTO people (id, seq, name, role, circle, relationship) VALUES (?, ?, ?, ?, ?, ?)");
+    SEED_PEOPLE.forEach((p, i) => person.run(p.id, i + 1, p.name, p.role, p.circle, p.relationship));
     const occasion = db.prepare("INSERT INTO occasions (name) VALUES (?)");
     for (const name of DEFAULT_OCCASIONS) occasion.run(name);
     const gift = db.prepare(
@@ -115,7 +154,7 @@ function seedIfEmpty(db: Db) {
 }
 
 /** Open (creating the directory and file if needed), migrate, and seed. */
-export function openDb(dir: string = dataDir()): Db {
+export function openDb(dir: string = dataDir(), options: { seed?: boolean } = {}): Db {
   try {
     mkdirSync(dir, { recursive: true });
   } catch (error) {
@@ -127,7 +166,7 @@ export function openDb(dir: string = dataDir()): Db {
   db.exec("PRAGMA busy_timeout = 5000");
   db.exec("PRAGMA foreign_keys = ON");
   migrate(db);
-  seedIfEmpty(db);
+  if (options.seed ?? seedSampleData()) seedIfEmpty(db);
   return db;
 }
 
@@ -142,6 +181,7 @@ export function getDb(): Db {
   if (current && current.dir === dir) return current.db;
   current?.db.close();
   const db = openDb(dir);
+  ensureDevAccount(db);
   holder[globalKey] = { dir, db };
   return db;
 }

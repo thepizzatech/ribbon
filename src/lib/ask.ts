@@ -69,12 +69,18 @@ export const askLedger = createServerFn({ method: "POST" })
     return { question: question.trim(), ledger };
   })
   .handler(async ({ data }): Promise<AskResult> => {
-    // Same passcode rule as the JSON API, so the assistant can't be used to spend the key.
-    const [{ getRequest }, { isAuthed }] = await Promise.all([
+    // Same sign-in rule as the JSON API, so the assistant can't be used to spend the key.
+    const [{ getRequest }, { requestSession }] = await Promise.all([
       import("@tanstack/react-start/server"),
-      import("../server/auth"),
+      import("../server/api"),
     ]);
-    if (!isAuthed(getRequest())) return { ok: false, error: "Sign in with the household passcode first." };
+    const request = getRequest();
+    const session = requestSession(request);
+    if (!session) return { ok: false, error: "Sign in first." };
+    // Server functions are POSTs too: require the same CSRF header as the JSON API.
+    if (request.headers.get("x-csrf-token") !== session.csrfToken) {
+      return { ok: false, error: "Your page is out of date. Reload and try again." };
+    }
 
     const apiKey = process.env.XAI_API_KEY;
     if (!apiKey) return { ok: false, error: "The assistant isn’t turned on. The server needs an XAI_API_KEY." };

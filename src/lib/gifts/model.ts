@@ -2,11 +2,75 @@ export type Circle = "household" | "outside";
 export type Direction = "received" | "given";
 export type GiftStatus = "idea" | "purchased" | "delivered";
 
+export const RELATIONSHIPS = [
+  { key: "self", label: "You" },
+  { key: "partner", label: "Partner" },
+  { key: "wife", label: "Wife" },
+  { key: "husband", label: "Husband" },
+  { key: "son", label: "Son" },
+  { key: "daughter", label: "Daughter" },
+  { key: "mother", label: "Mother" },
+  { key: "father", label: "Father" },
+  { key: "brother", label: "Brother" },
+  { key: "sister", label: "Sister" },
+  { key: "grandmother", label: "Grandmother" },
+  { key: "grandfather", label: "Grandfather" },
+  { key: "aunt", label: "Aunt" },
+  { key: "uncle", label: "Uncle" },
+  { key: "cousin", label: "Cousin" },
+  { key: "friend", label: "Friend" },
+  { key: "other", label: "Other" },
+] as const;
+
+export type Relationship = (typeof RELATIONSHIPS)[number]["key"];
+
+const RELATIONSHIP_KEYS: ReadonlySet<string> = new Set(RELATIONSHIPS.map((item) => item.key));
+
+const ROLE_WORDS: Record<string, Relationship> = {
+  you: "self",
+  me: "self",
+  self: "self",
+  partner: "partner",
+  spouse: "partner",
+  wife: "wife",
+  husband: "husband",
+  son: "son",
+  daughter: "daughter",
+  mother: "mother",
+  mom: "mother",
+  mum: "mother",
+  father: "father",
+  dad: "father",
+  brother: "brother",
+  sister: "sister",
+  grandmother: "grandmother",
+  grandma: "grandmother",
+  grandfather: "grandfather",
+  grandpa: "grandfather",
+  aunt: "aunt",
+  uncle: "uncle",
+  cousin: "cousin",
+  friend: "friend",
+};
+
+export function relationshipLabel(key: string): string {
+  return RELATIONSHIPS.find((item) => item.key === key)?.label ?? "Other";
+}
+
+/** Use a valid relationship key if given, else guess from the free-text role ("Mom" -> mother), else "other". */
+export function normalizeRelationship(value: unknown, role: unknown = ""): Relationship {
+  if (typeof value === "string" && RELATIONSHIP_KEYS.has(value)) return value as Relationship;
+  const word = typeof role === "string" ? role.trim().toLowerCase() : "";
+  return ROLE_WORDS[word] ?? "other";
+}
+
 export type Person = {
   id: string;
   name: string;
+  /** What the screen shows: the relationship label, or custom text when the relationship is "other". */
   role: string;
   circle: Circle;
+  relationship: Relationship;
 };
 
 export type Gift = {
@@ -60,14 +124,14 @@ const MONTHS = [
 const MONTH_LETTERS = ["J", "F", "M", "A", "M", "J", "J", "A", "S", "O", "N", "D"];
 
 export const SEED_PEOPLE: Person[] = [
-  { id: "p-avery", name: "Avery Cole", role: "You", circle: "household" },
-  { id: "p-jordan", name: "Jordan Cole", role: "Partner", circle: "household" },
-  { id: "p-noah", name: "Noah Cole", role: "Child", circle: "household" },
-  { id: "p-june", name: "June Cole", role: "Child", circle: "household" },
-  { id: "p-may", name: "May Ellison", role: "Aunt", circle: "outside" },
-  { id: "p-priya", name: "Priya Shah", role: "Friend", circle: "outside" },
-  { id: "p-eli", name: "Eli Brooks", role: "Coworker", circle: "outside" },
-  { id: "p-nguyen", name: "The Nguyens", role: "Neighbors", circle: "outside" },
+  { id: "p-avery", name: "Avery Cole", role: "You", circle: "household", relationship: "self" },
+  { id: "p-jordan", name: "Jordan Cole", role: "Partner", circle: "household", relationship: "partner" },
+  { id: "p-noah", name: "Noah Cole", role: "Child", circle: "household", relationship: "son" },
+  { id: "p-june", name: "June Cole", role: "Child", circle: "household", relationship: "daughter" },
+  { id: "p-may", name: "May Ellison", role: "Aunt", circle: "outside", relationship: "aunt" },
+  { id: "p-priya", name: "Priya Shah", role: "Friend", circle: "outside", relationship: "friend" },
+  { id: "p-eli", name: "Eli Brooks", role: "Coworker", circle: "outside", relationship: "other" },
+  { id: "p-nguyen", name: "The Nguyens", role: "Neighbors", circle: "outside", relationship: "other" },
 ];
 
 export const SEED_GIFTS: Gift[] = [
@@ -433,6 +497,7 @@ export function parseBackupData(data: unknown): Backup | null {
       name: person.name.slice(0, 80),
       role: person.role.slice(0, 40),
       circle: person.circle,
+      relationship: normalizeRelationship((person as { relationship?: unknown }).relationship, person.role),
     })),
     gifts: record.gifts.map((gift) => ({
       id: gift.id,
@@ -499,6 +564,7 @@ export function cleanPerson(person: Person): Person {
     name: person.name.trim().slice(0, 80),
     role: person.role.trim().slice(0, 40),
     circle: person.circle,
+    relationship: normalizeRelationship((person as { relationship?: unknown }).relationship, person.role),
   };
 }
 

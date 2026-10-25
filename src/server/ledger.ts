@@ -21,7 +21,7 @@ export type Result<T = object> = ({ ok: true } & T) | Failure;
 
 const fail = (status: Failure["status"], reason: string): Failure => ({ ok: false, status, reason });
 
-type PersonRow = { id: string; name: string; role: string; circle: Person["circle"] };
+type PersonRow = { id: string; name: string; role: string; circle: Person["circle"]; relationship: Person["relationship"] };
 type GiftRow = {
   id: string;
   direction: Gift["direction"];
@@ -36,7 +36,13 @@ type GiftRow = {
   note: string;
 };
 
-const toPerson = (row: PersonRow): Person => ({ id: row.id, name: row.name, role: row.role, circle: row.circle });
+const toPerson = (row: PersonRow): Person => ({
+  id: row.id,
+  name: row.name,
+  role: row.role,
+  circle: row.circle,
+  relationship: row.relationship,
+});
 const toGift = (row: GiftRow): Gift => ({
   id: row.id,
   direction: row.direction,
@@ -52,7 +58,7 @@ const toGift = (row: GiftRow): Gift => ({
 });
 
 export function listPeople(db: Db): Person[] {
-  return (db.prepare("SELECT id, name, role, circle FROM people ORDER BY seq").all() as PersonRow[]).map(toPerson);
+  return (db.prepare("SELECT id, name, role, circle, relationship FROM people ORDER BY seq").all() as PersonRow[]).map(toPerson);
 }
 
 export function listGifts(db: Db): Gift[] {
@@ -133,18 +139,19 @@ export function addPerson(db: Db, input: unknown): Result<{ person: Person }> {
   const person = cleanPerson(draft);
   if (!person.name) return fail(400, "Name the person.");
   if (db.prepare("SELECT 1 FROM people WHERE id = ?").get(person.id)) return fail(409, "That person already exists.");
-  db.prepare("INSERT INTO people (id, seq, name, role, circle) VALUES (?, ?, ?, ?, ?)").run(
+  db.prepare("INSERT INTO people (id, seq, name, role, circle, relationship) VALUES (?, ?, ?, ?, ?, ?)").run(
     person.id,
     nextSeq(db, "people"),
     person.name,
     person.role,
     person.circle,
+    person.relationship,
   );
   return { ok: true, person };
 }
 
 export function updatePerson(db: Db, id: string, patch: unknown): Result<{ person: Person }> {
-  const row = db.prepare("SELECT id, name, role, circle FROM people WHERE id = ?").get(id) as PersonRow | undefined;
+  const row = db.prepare("SELECT id, name, role, circle, relationship FROM people WHERE id = ?").get(id) as PersonRow | undefined;
   if (!row) return fail(404, "That person is gone.");
   const body = patch && typeof patch === "object" ? (patch as Partial<Person>) : {};
   const merged = {
@@ -152,14 +159,16 @@ export function updatePerson(db: Db, id: string, patch: unknown): Result<{ perso
     ...(body.name !== undefined ? { name: body.name } : {}),
     ...(body.role !== undefined ? { role: body.role } : {}),
     ...(body.circle !== undefined ? { circle: body.circle } : {}),
+    ...(body.relationship !== undefined ? { relationship: body.relationship } : {}),
   } as Person;
   if (!isPerson(merged)) return fail(400, "That person is missing a name, role, or circle.");
   const person = cleanPerson(merged);
   if (!person.name) return fail(400, "Name the person.");
-  db.prepare("UPDATE people SET name = ?, role = ?, circle = ? WHERE id = ?").run(
+  db.prepare("UPDATE people SET name = ?, role = ?, circle = ?, relationship = ? WHERE id = ?").run(
     person.name,
     person.role,
     person.circle,
+    person.relationship,
     id,
   );
   return { ok: true, person };
@@ -327,11 +336,30 @@ export function replaceLedger(
       `INSERT INTO household (id, name, demo, demo_dismissed) VALUES (1, ?, ?, ?)
        ON CONFLICT(id) DO UPDATE SET name = excluded.name, demo = excluded.demo, demo_dismissed = excluded.demo_dismissed`,
     ).run(backup.householdName.trim().slice(0, 80) || "Our household", flags.demo ? 1 : 0, flags.demoDismissed === false ? 0 : 1);
-    const person = db.prepare("INSERT INTO people (id, seq, name, role, circle) VALUES (?, ?, ?, ?, ?)");
-    backup.people.forEach((p, i) => person.run(p.id, i + 1, p.name, p.role, p.circle));
+    const person = db.prepare("INSERT INTO people (id, seq, name, role, circle, relationship) VALUES (?, ?, ?, ?, ?, ?)");
+    backup.people.forEach((p, i) => person.run(p.id, i + 1, p.name, p.role, p.circle, p.relationship));
     const occasion = db.prepare("INSERT INTO occasions (name) VALUES (?)");
     for (const name of normalized) occasion.run(name);
     // First gift in the file stays first on screen (highest seq).
     backup.gifts.forEach((g, i) => insertGift(db, g, backup.gifts.length - i));
+  });
+}
+
+// ---- first-run setup ----
+
+export function hasHousehold(db: Db): boolean {
+  return Boolean(db.prepare("SELECT 1 FROM household WHERE id = 1").get());
+}
+
+/** Create the household for a brand-new install: its name, default occasions, and the family members. */
+export function createHousehold(db: Db, name: string, people: Person[]): void {
+  transaction(db, () => {
+    db.prepare("INSERT INTO household (id, name, demo, demo_dismissed) VALUES (1, ?, 0, 1)").run(
+      name.trim().slice(0, 80) || "Our household",
+    );
+    const insert = db.prepare("INSERT INTO people (id, seq, name, role, circle, relationship) VALUES (?, ?, ?, ?, ?, ?)");
+    people.forEach((p, i) => insert.run(p.id, i + 1, p.name, p.role, p.circle, p.relationship));
+    const occasion = db.prepare("INSERT INTO occasions (name) VALUES (?)");
+    for (const item of DEFAULT_OCCASIONS) occasion.run(item);
   });
 }
