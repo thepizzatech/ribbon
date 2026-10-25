@@ -69,8 +69,15 @@ export const askLedger = createServerFn({ method: "POST" })
     return { question: question.trim(), ledger };
   })
   .handler(async ({ data }): Promise<AskResult> => {
+    // Same passcode rule as the JSON API, so the assistant can't be used to spend the key.
+    const [{ getRequest }, { isAuthed }] = await Promise.all([
+      import("@tanstack/react-start/server"),
+      import("../server/auth"),
+    ]);
+    if (!isAuthed(getRequest())) return { ok: false, error: "Sign in with the household passcode first." };
+
     const apiKey = process.env.XAI_API_KEY;
-    if (!apiKey) return { ok: false, error: "The assistant isn’t available right now. Your ledger still works on this device." };
+    if (!apiKey) return { ok: false, error: "The assistant isn’t turned on. The server needs an XAI_API_KEY." };
 
     try {
       let response = await callModel(apiKey, data.question, data.ledger, true);

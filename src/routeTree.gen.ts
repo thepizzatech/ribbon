@@ -14,6 +14,7 @@ import { Route as AppIndexRouteImport } from './routes/_app/index'
 import { Route as AppAskRouteImport } from './routes/_app/ask'
 import { Route as AppLedgerRouteImport } from './routes/_app/ledger'
 import { Route as AppPeopleRouteImport } from './routes/_app/people'
+import { Route as ApiSplatRouteImport } from './routes/api/$'
 
 const AppRouteRoute = AppRouteRouteImport.update({
   id: '/_app',
@@ -39,17 +40,24 @@ const AppPeopleRoute = AppPeopleRouteImport.update({
   path: '/people',
   getParentRoute: () => AppRouteRoute,
 } as any)
+const ApiSplatRoute = ApiSplatRouteImport.update({
+  id: '/api/$',
+  path: '/api/$',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof AppIndexRoute
   '/ask': typeof AppAskRoute
   '/ledger': typeof AppLedgerRoute
   '/people': typeof AppPeopleRoute
+  '/api/$': typeof ApiSplatRoute
 }
 export interface FileRoutesByTo {
   '/ask': typeof AppAskRoute
   '/ledger': typeof AppLedgerRoute
   '/people': typeof AppPeopleRoute
+  '/api/$': typeof ApiSplatRoute
   '/': typeof AppIndexRoute
 }
 export interface FileRoutesById {
@@ -58,24 +66,27 @@ export interface FileRoutesById {
   '/_app/ask': typeof AppAskRoute
   '/_app/ledger': typeof AppLedgerRoute
   '/_app/people': typeof AppPeopleRoute
+  '/api/$': typeof ApiSplatRoute
   '/_app/': typeof AppIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/ask' | '/ledger' | '/people'
+  fullPaths: '/' | '/ask' | '/ledger' | '/people' | '/api/$'
   fileRoutesByTo: FileRoutesByTo
-  to: '/ask' | '/ledger' | '/people' | '/'
+  to: '/ask' | '/ledger' | '/people' | '/api/$' | '/'
   id:
     | '__root__'
     | '/_app'
     | '/_app/ask'
     | '/_app/ledger'
     | '/_app/people'
+    | '/api/$'
     | '/_app/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   AppRouteRoute: typeof AppRouteRouteWithChildren
+  ApiSplatRoute: typeof ApiSplatRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -115,6 +126,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppPeopleRouteImport
       parentRoute: typeof AppRouteRoute
     }
+    '/api/$': {
+      id: '/api/$'
+      path: '/api/$'
+      fullPath: '/api/$'
+      preLoaderRoute: typeof ApiSplatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -138,6 +156,7 @@ const AppRouteRouteWithChildren = AppRouteRoute._addFileChildren(
 
 const rootRouteChildren: RootRouteChildren = {
   AppRouteRoute: AppRouteRouteWithChildren,
+  ApiSplatRoute: ApiSplatRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

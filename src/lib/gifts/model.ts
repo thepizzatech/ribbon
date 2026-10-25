@@ -379,7 +379,7 @@ export function serializeLedger(input: {
   });
 }
 
-function isPerson(value: unknown): value is Person {
+export function isPerson(value: unknown): value is Person {
   if (!value || typeof value !== "object") return false;
   const person = value as Person;
   return (
@@ -392,7 +392,7 @@ function isPerson(value: unknown): value is Person {
   );
 }
 
-function isGift(value: unknown): value is Gift {
+export function isGift(value: unknown): value is Gift {
   if (!value || typeof value !== "object") return false;
   const gift = value as Gift;
   return (
@@ -415,6 +415,11 @@ export function parseBackup(text: string): Backup | null {
   } catch {
     return null;
   }
+  return parseBackupData(data);
+}
+
+/** Validate and clean an already-parsed backup object (browser import, server import, localStorage). */
+export function parseBackupData(data: unknown): Backup | null {
   if (!data || typeof data !== "object") return null;
   const record = data as Partial<Backup>;
   if (typeof record.householdName !== "string") return null;
@@ -486,3 +491,36 @@ export function normalizeOccasions(raw: unknown, gifts: { occasion: string }[]):
   }
   return base;
 }
+
+/** Trim and clamp a person the same way for browser edits, imports, and the API. */
+export function cleanPerson(person: Person): Person {
+  return {
+    id: person.id,
+    name: person.name.trim().slice(0, 80),
+    role: person.role.trim().slice(0, 40),
+    circle: person.circle,
+  };
+}
+
+/** Trim and clamp a gift the same way for browser edits, imports, and the API. */
+export function cleanGift(gift: Gift): Gift {
+  return {
+    id: gift.id,
+    direction: gift.direction,
+    title: gift.title.slice(0, 120),
+    occasion: typeof gift.occasion === "string" ? gift.occasion.slice(0, 60) : "",
+    date: gift.date.slice(0, 10),
+    giverId: gift.giverId,
+    receiverId: gift.receiverId,
+    amount: typeof gift.amount === "number" && Number.isFinite(gift.amount) ? gift.amount : null,
+    status: gift.status,
+    thanked: gift.thanked,
+    note: typeof gift.note === "string" ? gift.note.slice(0, 400) : "",
+  };
+}
+
+/** The full ledger as the server stores it and the client mirrors it. */
+export type Ledger = Backup & {
+  demo: boolean;
+  demoDismissed: boolean;
+};
