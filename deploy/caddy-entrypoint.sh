@@ -46,6 +46,9 @@ esac
 {
   echo "{"
   echo "	admin off"
+  # Browsers send no SNI when opened by IP address; without a default Caddy falls back to the
+  # container's internal address (behind Docker port mapping) and finds no certificate.
+  echo "	default_sni $host"
   echo "	http_port $HTTP_PORT"
   echo "	https_port $HTTPS_PORT"
   # Caddy's own HTTP->HTTPS redirect drops a non-standard port, so spell it out below.

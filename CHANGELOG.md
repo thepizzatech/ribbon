@@ -27,6 +27,9 @@ First development build of 0.2. Not released yet: `main` is the development bran
 - Optional `SETUP_CODE` to protect creation of the first owner login.
 - `LICENSE` (MIT), `SECURITY.md`, `CONTRIBUTING.md`, issue templates and the release workflow.
 
+### Fixed
+- Caddy: set `default_sni` so HTTPS works when the site is opened by IP address behind Docker port mapping.
+
 ### Changed
 
 - A ledger saved by an older browser-only version is now offered for import once after sign-in, instead of being copied automatically. It is only offered when the server has no gifts of its own yet (or only the sample household).
