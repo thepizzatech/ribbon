@@ -168,6 +168,27 @@ export const MIGRATIONS: Migration[] = [
       );
     `,
   },
+  {
+    id: 5,
+    name: "budgets, per-user preferences",
+    sql: `
+      CREATE TABLE budgets (
+        household_id TEXT NOT NULL,
+        scope TEXT NOT NULL CHECK (scope IN ('person', 'occasion')),
+        key TEXT NOT NULL,
+        year INTEGER NOT NULL,
+        amount REAL NOT NULL CHECK (amount >= 0),
+        PRIMARY KEY (household_id, scope, key, year)
+      );
+      CREATE TABLE user_prefs (
+        user_id TEXT PRIMARY KEY,
+        calendar_token TEXT UNIQUE,
+        remind_days INTEGER NOT NULL DEFAULT 14,
+        tour_state TEXT CHECK (tour_state IN ('done', 'skipped')),
+        tour_at TEXT
+      );
+    `,
+  },
 ];
 
 export function dataDir(): string {

@@ -260,6 +260,7 @@ export function removePerson(ctx: Ctx, id: string): Result {
   transaction(ctx.db, () => {
     ctx.db.prepare("UPDATE users SET person_id = NULL WHERE person_id = ?").run(id);
     ctx.db.prepare("DELETE FROM wishlist_items WHERE person_id = ?").run(id);
+    ctx.db.prepare("DELETE FROM budgets WHERE household_id = ? AND scope = 'person' AND key = ?").run(ctx.hid, id);
     ctx.db.prepare("DELETE FROM people WHERE id = ?").run(id);
   });
   return { ok: true };
@@ -415,6 +416,7 @@ export function renameOccasion(
     if (name !== from) {
       ctx.db.prepare("UPDATE occasions SET name = ? WHERE name = ? AND household_id = ?").run(name, from, ctx.hid);
       ctx.db.prepare("UPDATE gifts SET occasion = ? WHERE occasion = ? AND household_id = ?").run(name, from, ctx.hid);
+      ctx.db.prepare("UPDATE budgets SET key = ? WHERE scope = 'occasion' AND key = ? AND household_id = ?").run(name, from, ctx.hid);
     }
     if (date !== undefined) {
       ctx.db
@@ -433,6 +435,7 @@ export function removeOccasion(ctx: Ctx, name: string): Result<{ occasions: stri
     return fail(409, "Gifts still use this. Rename it, or change those gifts first.");
   }
   ctx.db.prepare("DELETE FROM occasions WHERE name = ? AND household_id = ?").run(name, ctx.hid);
+  ctx.db.prepare("DELETE FROM budgets WHERE scope = 'occasion' AND key = ? AND household_id = ?").run(name, ctx.hid);
   return { ok: true, occasions: listOccasions(ctx), occasionDates: listOccasionDates(ctx) };
 }
 
@@ -493,6 +496,7 @@ export function replaceLedger(
     const keepIds = people.map((p) => p.id);
     const marks = keepIds.map(() => "?").join(",") || "''";
     ctx.db.prepare(`DELETE FROM wishlist_items WHERE household_id = ? AND person_id NOT IN (${marks})`).run(ctx.hid, ...keepIds);
+    ctx.db.prepare(`DELETE FROM budgets WHERE household_id = ? AND scope = 'person' AND key NOT IN (${marks})`).run(ctx.hid, ...keepIds);
     const keep = new Set(people.map((p) => p.id));
     for (const id of myPeople) if (!keep.has(id)) ctx.db.prepare("UPDATE users SET person_id = NULL WHERE person_id = ?").run(id);
     ctx.db.prepare("DELETE FROM gifts WHERE household_id = ?").run(ctx.hid);

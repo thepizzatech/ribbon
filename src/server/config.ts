@@ -77,3 +77,15 @@ export function devAccount() {
     password: process.env.DEV_PASSWORD?.trim() || "ribbon-dev-password",
   };
 }
+
+/** Five-field cron for scheduled backups (minute hour day month weekday). "off" disables. Default: daily at 03:00. */
+export function backupCron(): string {
+  const raw = process.env.BACKUP_CRON?.trim();
+  return raw ? raw : "0 3 * * *";
+}
+
+/** How many scheduled backups to keep (older ones are deleted). Default 14. */
+export function backupKeep(): number {
+  const n = Number(process.env.BACKUP_KEEP);
+  return Number.isInteger(n) && n >= 1 && n <= 1000 ? n : 14;
+}

@@ -142,6 +142,7 @@ export function removeUser(db: Db, id: string, actingUserId: string, actingHouse
     const owners = (db.prepare("SELECT COUNT(*) AS n FROM users WHERE role = 'owner' AND household_id = ?").get(row.household_id) as { n: number }).n;
     if (owners <= 1) return { ok: false, status: 409, reason: "Keep at least one owner." };
   }
+  db.prepare("DELETE FROM user_prefs WHERE user_id = ?").run(id);
   db.prepare("DELETE FROM users WHERE id = ?").run(id);
   return { ok: true };
 }
