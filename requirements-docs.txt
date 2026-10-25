@@ -1,0 +1,3 @@
+# Documentation site (MkDocs Material). Build: pip install -r requirements-docs.txt && mkdocs build --strict
+mkdocs==1.6.1
+mkdocs-material==9.8.0

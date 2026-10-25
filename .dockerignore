@@ -9,3 +9,9 @@ dist
 .env
 .env.*
 *.log
+docs
+site
+hooks
+mkdocs.yml
+requirements-docs.txt
+.venv-docs

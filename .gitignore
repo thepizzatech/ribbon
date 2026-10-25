@@ -8,3 +8,8 @@ dist
 !.env.example
 *.log
 data/
+
+# Documentation site build
+site/
+.venv-docs/
+__pycache__/

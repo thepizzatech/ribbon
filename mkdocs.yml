@@ -1,0 +1,100 @@
+site_name: Ribbon
+site_description: A mobile-first family gift tracker you host yourself.
+site_url: https://ribbon.thepizza.tech/
+repo_url: https://github.com/thepizzatech/ribbon
+repo_name: thepizzatech/ribbon
+edit_uri: edit/main/docs/
+copyright: Ribbon is open source under the MIT License.
+
+theme:
+  name: material
+  language: en
+  logo: assets/logo.svg
+  favicon: assets/logo.svg
+  palette:
+    - media: "(prefers-color-scheme)"
+      toggle:
+        icon: material/brightness-auto
+        name: Switch to light mode
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-4
+        name: Switch to system preference
+  features:
+    - navigation.tabs
+    - navigation.tabs.sticky
+    - navigation.sections
+    - navigation.indexes
+    - navigation.top
+    - navigation.footer
+    - navigation.tracking
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+    - content.action.edit
+    - toc.follow
+
+validation:
+  omitted_files: warn
+  absolute_links: warn
+  unrecognized_links: warn
+  anchors: warn
+
+plugins:
+  - search
+
+hooks:
+  - hooks/docs_links.py
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - def_list
+  - md_in_html
+  - tables
+  - toc:
+      permalink: true
+  - pymdownx.details
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/thepizzatech/ribbon
+
+nav:
+  - Home: index.md
+  - Get started:
+      - Getting started: getting-started.md
+      - Backups & restore: backups.md
+      - Upgrading: upgrading.md
+  - Configuration: configuration.md
+  - Security:
+      - Securing your install: securing.md
+      - HTTPS and reverse proxies: REVERSE-PROXY.md
+      - Security audit: SECURITY-AUDIT.md
+  - Features: FEATURES.md
+  - Help:
+      - Troubleshooting & FAQ: troubleshooting.md
+      - Changelog: changelog.md
+  - Contributing:
+      - Contributing: contributing.md
+      - Releasing: RELEASING.md
