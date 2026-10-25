@@ -31,7 +31,7 @@ export default defineConfig(({ command }) => {
     plugins: [
       tailwindcss(),
       tanstackStart(),
-      ...(command === "build" ? [nitro({ preset: "node-server", serverDir: "./server" })] : []),
+      ...(command === "build" ? [nitro({ preset: "node-server", serverDir: "./server", traceDeps: ["@simplewebauthn/server", "reflect-metadata"] })] : []),
       viteReact(),
     ],
   };

@@ -1,5 +1,7 @@
 // Passkeys (WebAuthn) as a second way to sign in. Registration happens in Settings; sign-in needs no username.
 import { randomBytes } from "node:crypto";
+// Must run before @simplewebauthn/server: its X.509 dependency (tsyringe) needs the polyfill, and the production bundle fails at startup without it.
+import "reflect-metadata";
 import {
   generateAuthenticationOptions,
   generateRegistrationOptions,
