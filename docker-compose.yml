@@ -12,6 +12,11 @@ services:
   ribbon:
     image: ghcr.io/thepizzatech/ribbon:${RIBBON_TAG:-latest}
     restart: unless-stopped
+    # Ribbon needs no extra privileges: drop every Linux capability and forbid gaining new ones.
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
     ports:
       - "${PORT:-8080}:8080"
     volumes:
@@ -24,6 +29,7 @@ services:
       HSTS: ${HSTS:-}
       SEED_SAMPLE_DATA: ${SEED_SAMPLE_DATA:-false}
       SETUP_CODE: ${SETUP_CODE:-}
+      ALLOW_PUBLIC_SETUP: ${ALLOW_PUBLIC_SETUP:-}
       XAI_API_KEY: ${XAI_API_KEY:-}
       TOUR_ALWAYS: ${TOUR_ALWAYS:-}
       TOUR_IN_DEV: ${TOUR_IN_DEV:-}
