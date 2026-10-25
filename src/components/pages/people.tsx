@@ -1,7 +1,14 @@
+import { Link } from "@tanstack/react-router";
+import { Plus } from "lucide-react";
 import { useOverlay } from "@/components/overlay";
 import { Button } from "@/components/ui";
 import { personCounts, type Person } from "@/lib/gifts/model";
 import { useLedger } from "@/lib/gifts/store";
+
+export function initialsOf(name: string) {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  return ((parts[0]?.[0] ?? "?") + (parts.length > 1 ? (parts[parts.length - 1]?.[0] ?? "") : "")).toUpperCase();
+}
 
 export function PeoplePage() {
   const people = useLedger((state) => state.people);
@@ -11,18 +18,21 @@ export function PeoplePage() {
   const outside = people.filter((person) => person.circle === "outside");
 
   return (
-    <div className="flex flex-col gap-5">
-      <div className="flex items-end justify-between gap-3">
+    <div>
+      <div className="page-head">
         <div>
-          <h1 className="display text-4xl">People</h1>
-          <p className="mt-1 text-muted">Who gives, and who receives.</p>
+          <h1 className="page-title">People</h1>
+          <p className="mt-1 text-sm text-muted">Who gives, and who receives.</p>
         </div>
-        <Button onClick={() => open({ type: "person", id: null })}>Add</Button>
+        <div className="actions">
+          <Button pill onClick={() => open({ type: "person", id: null })}>
+            <Plus size={15} strokeWidth={1.75} />
+            Add person
+          </Button>
+        </div>
       </div>
-      <div className="grid gap-6 md:grid-cols-2">
-        <Section title="Household" people={household} gifts={gifts} onOpen={(id) => open({ type: "person", id })} />
-        <Section title="Everyone else" people={outside} gifts={gifts} onOpen={(id) => open({ type: "person", id })} />
-      </div>
+      <Section title="Household" people={household} gifts={gifts} />
+      <Section title="Everyone else" people={outside} gifts={gifts} />
     </div>
   );
 }
@@ -31,36 +41,38 @@ function Section({
   title,
   people,
   gifts,
-  onOpen,
 }: {
   title: string;
   people: Person[];
   gifts: Parameters<typeof personCounts>[0];
-  onOpen: (id: string) => void;
 }) {
   return (
-    <section>
-      <h2 className="mb-2 text-sm font-medium text-muted">{title}</h2>
+    <section className="mb-6">
+      <h2 className="section-title" style={{ marginTop: 0 }}>
+        {title}
+      </h2>
       {people.length === 0 ? (
         <p className="text-sm text-muted">No one here yet.</p>
       ) : (
-        <ul className="flex flex-col gap-3">
+        <ul className="people-grid m-0 list-none p-0">
           {people.map((person) => {
             const counts = personCounts(gifts, person.id);
             return (
               <li key={person.id}>
-                <button type="button" className="gift-row row-main press" onClick={() => onOpen(person.id)}>
-                  <span className="flex items-start justify-between gap-3">
-                    <span className="min-w-0 text-left">
-                      <span className="block font-medium">{person.name}</span>
-                      <span className="mt-1 block text-sm text-muted">{person.role || title}</span>
-                    </span>
-                    <span className="shrink-0 text-right text-sm tabular-nums text-muted">
-                      Gave {counts.gave}
-                      <span className="block">Got {counts.got}</span>
-                    </span>
+                <Link to="/people/$personId" params={{ personId: person.id }} className="person-card">
+                  <span className="avatar" aria-hidden="true">
+                    {initialsOf(person.name)}
                   </span>
-                </button>
+                  <span className="meta">
+                    <span className="name">{person.name}</span>
+                    <span className="rel">{person.role || title}</span>
+                  </span>
+                  <span className="counts tnum">
+                    Gave <b>{counts.gave}</b>
+                    <br />
+                    Got <b>{counts.got}</b>
+                  </span>
+                </Link>
               </li>
             );
           })}

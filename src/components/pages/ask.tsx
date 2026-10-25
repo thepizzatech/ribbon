@@ -1,4 +1,6 @@
-import { useState, type ReactNode } from "react";
+import { useSearch } from "@tanstack/react-router";
+import { Sparkles } from "lucide-react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Button, TextArea } from "@/components/ui";
 import { askLedger } from "@/lib/ask";
 import { serializeLedger, todayISO, yearsOf } from "@/lib/gifts/model";
@@ -13,6 +15,8 @@ export function AskPage() {
   const [answer, setAnswer] = useState("");
   const [error, setError] = useState("");
   const [pending, setPending] = useState(false);
+  const { q } = useSearch({ from: "/_app/ask" });
+  const asked = useRef<string | null>(null);
 
   const prompts = [
     { label: "Thank-yous", question: "Who still needs a thank-you, and for which gifts?" },
@@ -54,13 +58,21 @@ export function AskPage() {
     }
   }
 
+  // Arriving from an Overview insight: ask its question once.
+  useEffect(() => {
+    if (!q || asked.current === q) return;
+    asked.current = q;
+    void ask(q);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- run once per incoming question
+  }, [q]);
+
   return (
-    <div className="flex flex-col gap-5">
-      <div>
-        <h1 className="display text-4xl">Ask</h1>
-        <p className="mt-1 max-w-xl text-muted">
-          Questions and a year note, answered only from this ledger.
-        </p>
+    <div className="flex max-w-3xl flex-col gap-5">
+      <div className="page-head" style={{ marginBottom: 0 }}>
+        <div>
+          <h1 className="page-title">Ask</h1>
+          <p className="mt-1 max-w-xl text-sm text-muted">Questions and a year note, answered only from this ledger.</p>
+        </div>
       </div>
 
       <div className="chip-row">
@@ -97,7 +109,7 @@ export function AskPage() {
       </form>
 
       {error ? (
-        <p className="panel text-sm text-primary" role="alert">
+        <p className="card text-sm" role="alert">
           {error}
         </p>
       ) : null}
@@ -105,8 +117,10 @@ export function AskPage() {
       {pending ? <p className="text-sm text-muted">Reading the ledger…</p> : null}
 
       {answer ? (
-        <article className="panel">
-          <h2 className="text-sm font-medium text-muted">Answer</h2>
+        <article className="card">
+          <h2 className="card-title flex items-center gap-2">
+            <Sparkles size={16} strokeWidth={1.5} aria-hidden="true" /> Answer
+          </h2>
           <div className="mt-3">
             <Prose text={answer} />
           </div>
@@ -139,7 +153,7 @@ function Prose({ text }: { text: string }) {
       <ul key={blocks.length} className="flex flex-col gap-2">
         {items.map((item, index) => (
           <li key={index} className="flex gap-3">
-            <span className="mt-2 size-1.5 shrink-0 rounded-full bg-primary" />
+            <span className="mt-2 size-1.5 shrink-0 rounded-full bg-out" />
             <span>{clean(item)}</span>
           </li>
         ))}
@@ -167,7 +181,7 @@ function Prose({ text }: { text: string }) {
   flushParagraph();
   flushBullets();
 
-  return <div className="flex flex-col gap-3 text-base">{blocks}</div>;
+  return <div className="flex flex-col gap-3 text-sm leading-relaxed">{blocks}</div>;
 }
 
 function clean(value: string) {

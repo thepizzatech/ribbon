@@ -1,0 +1,196 @@
+/* Ledger: dense sortable table; becomes stacked rows on phones. */
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.search-field {
+  position: relative;
+  flex: 1 1 240px;
+  max-width: 420px;
+}
+
+.search-field svg {
+  position: absolute;
+  top: 50%;
+  left: 12px;
+  color: var(--color-subtle);
+  pointer-events: none;
+  transform: translateY(-50%);
+}
+
+.search-field .field {
+  padding-left: 36px;
+}
+
+.table-card {
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  border-radius: var(--card-radius);
+  background: var(--color-card);
+}
+
+.table-scroll {
+  overflow-x: auto;
+}
+
+.ledger-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8125rem;
+}
+
+.ledger-table th {
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-card);
+  padding: 0;
+  color: var(--color-muted);
+  font-size: 0.75rem;
+  font-weight: 500;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.ledger-table th button {
+  display: inline-flex;
+  width: 100%;
+  align-items: center;
+  gap: 4px;
+  border: 0;
+  background: transparent;
+  padding: 12px 14px;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+}
+
+.ledger-table th button:hover {
+  color: var(--color-foreground);
+}
+
+.ledger-table th[aria-sort] button {
+  color: var(--color-foreground);
+}
+
+.ledger-table td {
+  border-bottom: 1px solid var(--color-border);
+  padding: 11px 14px;
+  vertical-align: middle;
+}
+
+.ledger-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.ledger-table tbody tr {
+  cursor: pointer;
+  transition: background var(--motion-quick);
+}
+
+.ledger-table tbody tr:hover {
+  background: var(--color-background);
+}
+
+.ledger-table .c-amount,
+.ledger-table th.c-amount button {
+  justify-content: flex-end;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.row-title {
+  display: block;
+  overflow: hidden;
+  max-width: 280px;
+  border: 0;
+  background: transparent;
+  padding: 0;
+  color: var(--color-foreground);
+  font: inherit;
+  font-weight: 500;
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.row-sub {
+  display: block;
+  color: var(--color-muted);
+  font-size: 0.75rem;
+}
+
+.arrow-gap {
+  color: var(--color-subtle);
+}
+
+.table-foot {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  border-top: 1px solid var(--color-border);
+  padding: 10px 14px;
+  color: var(--color-muted);
+  font-size: 0.75rem;
+}
+
+@media (max-width: 767px) {
+  .ledger-table thead {
+    display: none;
+  }
+
+  .ledger-table,
+  .ledger-table tbody {
+    display: block;
+  }
+
+  .ledger-table tr {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas: "gift amount" "people status" "date date";
+    gap: 2px 12px;
+    border-bottom: 1px solid var(--color-border);
+    padding: 12px 14px;
+  }
+
+  .ledger-table tbody tr:last-child {
+    border-bottom: 0;
+  }
+
+  .ledger-table td {
+    border: 0;
+    padding: 0;
+  }
+
+  .ledger-table .c-gift {
+    grid-area: gift;
+  }
+
+  .ledger-table .c-amount {
+    grid-area: amount;
+    text-align: right;
+  }
+
+  .ledger-table .c-people {
+    grid-area: people;
+    color: var(--color-muted);
+    font-size: 0.75rem;
+  }
+
+  .ledger-table .c-status {
+    grid-area: status;
+    justify-self: end;
+  }
+
+  .ledger-table .c-date {
+    grid-area: date;
+    color: var(--color-subtle);
+    font-size: 0.75rem;
+  }
+
+  .row-title {
+    max-width: none;
+  }
+}

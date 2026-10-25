@@ -13,8 +13,9 @@ import { Route as AppRouteRouteImport } from './routes/_app/route'
 import { Route as AppIndexRouteImport } from './routes/_app/index'
 import { Route as AppAskRouteImport } from './routes/_app/ask'
 import { Route as AppLedgerRouteImport } from './routes/_app/ledger'
-import { Route as AppPeopleRouteImport } from './routes/_app/people'
 import { Route as ApiSplatRouteImport } from './routes/api/$'
+import { Route as AppPeopleIndexRouteImport } from './routes/_app/people/index'
+import { Route as AppPeoplePersonIdRouteImport } from './routes/_app/people/$personId'
 
 const AppRouteRoute = AppRouteRouteImport.update({
   id: '/_app',
@@ -35,53 +36,63 @@ const AppLedgerRoute = AppLedgerRouteImport.update({
   path: '/ledger',
   getParentRoute: () => AppRouteRoute,
 } as any)
-const AppPeopleRoute = AppPeopleRouteImport.update({
-  id: '/people',
-  path: '/people',
-  getParentRoute: () => AppRouteRoute,
-} as any)
 const ApiSplatRoute = ApiSplatRouteImport.update({
   id: '/api/$',
   path: '/api/$',
   getParentRoute: () => rootRouteImport,
+} as any)
+const AppPeopleIndexRoute = AppPeopleIndexRouteImport.update({
+  id: '/people/',
+  path: '/people/',
+  getParentRoute: () => AppRouteRoute,
+} as any)
+const AppPeoplePersonIdRoute = AppPeoplePersonIdRouteImport.update({
+  id: '/people/$personId',
+  path: '/people/$personId',
+  getParentRoute: () => AppRouteRoute,
 } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof AppIndexRoute
   '/ask': typeof AppAskRoute
   '/ledger': typeof AppLedgerRoute
-  '/people': typeof AppPeopleRoute
   '/api/$': typeof ApiSplatRoute
+  '/people/$personId': typeof AppPeoplePersonIdRoute
+  '/people/': typeof AppPeopleIndexRoute
 }
 export interface FileRoutesByTo {
   '/ask': typeof AppAskRoute
   '/ledger': typeof AppLedgerRoute
-  '/people': typeof AppPeopleRoute
   '/api/$': typeof ApiSplatRoute
   '/': typeof AppIndexRoute
+  '/people/$personId': typeof AppPeoplePersonIdRoute
+  '/people': typeof AppPeopleIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_app': typeof AppRouteRouteWithChildren
   '/_app/ask': typeof AppAskRoute
   '/_app/ledger': typeof AppLedgerRoute
-  '/_app/people': typeof AppPeopleRoute
   '/api/$': typeof ApiSplatRoute
   '/_app/': typeof AppIndexRoute
+  '/_app/people/$personId': typeof AppPeoplePersonIdRoute
+  '/_app/people/': typeof AppPeopleIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/ask' | '/ledger' | '/people' | '/api/$'
+  fullPaths:
+    '/' | '/ask' | '/ledger' | '/api/$' | '/people/$personId' | '/people/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/ask' | '/ledger' | '/people' | '/api/$' | '/'
+  to: '/ask' | '/ledger' | '/api/$' | '/' | '/people/$personId' | '/people'
   id:
     | '__root__'
     | '/_app'
     | '/_app/ask'
     | '/_app/ledger'
-    | '/_app/people'
     | '/api/$'
     | '/_app/'
+    | '/_app/people/$personId'
+    | '/_app/people/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -119,13 +130,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppLedgerRouteImport
       parentRoute: typeof AppRouteRoute
     }
-    '/_app/people': {
-      id: '/_app/people'
-      path: '/people'
-      fullPath: '/people'
-      preLoaderRoute: typeof AppPeopleRouteImport
-      parentRoute: typeof AppRouteRoute
-    }
     '/api/$': {
       id: '/api/$'
       path: '/api/$'
@@ -133,21 +137,37 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiSplatRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_app/people/': {
+      id: '/_app/people/'
+      path: '/people'
+      fullPath: '/people/'
+      preLoaderRoute: typeof AppPeopleIndexRouteImport
+      parentRoute: typeof AppRouteRoute
+    }
+    '/_app/people/$personId': {
+      id: '/_app/people/$personId'
+      path: '/people/$personId'
+      fullPath: '/people/$personId'
+      preLoaderRoute: typeof AppPeoplePersonIdRouteImport
+      parentRoute: typeof AppRouteRoute
+    }
   }
 }
 
 interface AppRouteRouteChildren {
   AppAskRoute: typeof AppAskRoute
   AppLedgerRoute: typeof AppLedgerRoute
-  AppPeopleRoute: typeof AppPeopleRoute
   AppIndexRoute: typeof AppIndexRoute
+  AppPeoplePersonIdRoute: typeof AppPeoplePersonIdRoute
+  AppPeopleIndexRoute: typeof AppPeopleIndexRoute
 }
 
 const AppRouteRouteChildren: AppRouteRouteChildren = {
   AppAskRoute: AppAskRoute,
   AppLedgerRoute: AppLedgerRoute,
-  AppPeopleRoute: AppPeopleRoute,
   AppIndexRoute: AppIndexRoute,
+  AppPeoplePersonIdRoute: AppPeoplePersonIdRoute,
+  AppPeopleIndexRoute: AppPeopleIndexRoute,
 }
 
 const AppRouteRouteWithChildren = AppRouteRoute._addFileChildren(
