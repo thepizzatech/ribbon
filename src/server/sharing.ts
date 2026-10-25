@@ -2,6 +2,7 @@
 import { createHash, randomBytes } from "node:crypto";
 import type { Db } from "./db.ts";
 import { transaction } from "./db.ts";
+import { purgeAfterUnlink } from "./exchange-cleanup.ts";
 
 export const INVITE_DAYS = 7;
 const hashCode = (code: string) => createHash("sha256").update(code.trim().toUpperCase()).digest("hex");
@@ -60,6 +61,7 @@ export function redeemInvite(db: Db, code: string, hid: string, now = Date.now()
 export function unlink(db: Db, a: string, b: string) {
   transaction(db, () => {
     db.prepare("DELETE FROM household_links WHERE (household_id = ? AND other_id = ?) OR (household_id = ? AND other_id = ?)").run(a, b, b, a);
+    purgeAfterUnlink(db, a, b);
     // Anything one side reserved on the other's lists goes with the link.
     db.prepare(
       `UPDATE wishlist_items SET status = 'wanted', claimed_by_user_id = NULL, claimed_by_name = ''

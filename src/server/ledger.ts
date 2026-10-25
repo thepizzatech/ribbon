@@ -17,6 +17,7 @@ import {
   type Ledger,
   type Person,
 } from "../lib/gifts/model.ts";
+import { purgeGuest, purgeParticipants } from "./exchange-cleanup.ts";
 import { transaction, type Db } from "./db.ts";
 
 export type Failure = { ok: false; status: 400 | 404 | 409; reason: string };
@@ -247,6 +248,7 @@ export function updatePerson(ctx: Ctx, id: string, patch: unknown): Result<{ per
       person.shared ? 1 : 0,
       id,
     );
+  if (!person.shared) purgeGuest(ctx.db, id, ctx.hid);
   return { ok: true, person };
 }
 
@@ -260,6 +262,7 @@ export function removePerson(ctx: Ctx, id: string): Result {
   transaction(ctx.db, () => {
     ctx.db.prepare("UPDATE users SET person_id = NULL WHERE person_id = ?").run(id);
     ctx.db.prepare("DELETE FROM wishlist_items WHERE person_id = ?").run(id);
+    purgeParticipants(ctx.db, [id]);
     ctx.db.prepare("DELETE FROM budgets WHERE household_id = ? AND scope = 'person' AND key = ?").run(ctx.hid, id);
     ctx.db.prepare("DELETE FROM people WHERE id = ?").run(id);
   });
@@ -497,6 +500,7 @@ export function replaceLedger(
     const marks = keepIds.map(() => "?").join(",") || "''";
     ctx.db.prepare(`DELETE FROM wishlist_items WHERE household_id = ? AND person_id NOT IN (${marks})`).run(ctx.hid, ...keepIds);
     ctx.db.prepare(`DELETE FROM budgets WHERE household_id = ? AND scope = 'person' AND key NOT IN (${marks})`).run(ctx.hid, ...keepIds);
+    purgeParticipants(ctx.db, myPeople.filter((pid) => !keepIds.includes(pid)));
     const keep = new Set(people.map((p) => p.id));
     for (const id of myPeople) if (!keep.has(id)) ctx.db.prepare("UPDATE users SET person_id = NULL WHERE person_id = ?").run(id);
     ctx.db.prepare("DELETE FROM gifts WHERE household_id = ?").run(ctx.hid);

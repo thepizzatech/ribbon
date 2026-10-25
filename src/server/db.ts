@@ -189,6 +189,47 @@ export const MIGRATIONS: Migration[] = [
       );
     `,
   },
+  {
+    id: 6,
+    name: "secret santa",
+    sql: `
+      CREATE TABLE exchanges (
+        id TEXT PRIMARY KEY,
+        household_id TEXT NOT NULL,
+        organiser_user_id TEXT NOT NULL,
+        name TEXT NOT NULL,
+        event_date TEXT NOT NULL,
+        budget REAL,
+        organiser_peek INTEGER NOT NULL DEFAULT 0,
+        avoid_previous INTEGER NOT NULL DEFAULT 0,
+        status TEXT NOT NULL DEFAULT 'draft' CHECK (status IN ('draft', 'drawn')),
+        draw_count INTEGER NOT NULL DEFAULT 0,
+        drawn_at TEXT,
+        created_at TEXT NOT NULL
+      );
+      CREATE INDEX exchanges_household ON exchanges (household_id);
+      CREATE TABLE exchange_participants (
+        exchange_id TEXT NOT NULL,
+        person_id TEXT NOT NULL,
+        household_id TEXT NOT NULL,
+        name TEXT NOT NULL,
+        PRIMARY KEY (exchange_id, person_id)
+      );
+      CREATE INDEX exchange_participants_person ON exchange_participants (person_id);
+      CREATE TABLE exchange_exclusions (
+        exchange_id TEXT NOT NULL,
+        giver_id TEXT NOT NULL,
+        receiver_id TEXT NOT NULL,
+        PRIMARY KEY (exchange_id, giver_id, receiver_id)
+      );
+      CREATE TABLE exchange_assignments (
+        exchange_id TEXT NOT NULL,
+        giver_id TEXT NOT NULL,
+        receiver_id TEXT NOT NULL,
+        PRIMARY KEY (exchange_id, giver_id)
+      );
+    `,
+  },
 ];
 
 export function dataDir(): string {
