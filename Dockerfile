@@ -5,7 +5,7 @@
 #
 # Needs Node 22.13+ for the built-in node:sqlite module (no native add-ons to compile).
 
-FROM node:22-bookworm-slim AS dev
+FROM node:26-bookworm-slim AS dev
 WORKDIR /app
 ENV DATA_DIR=/data \
     SEED_SAMPLE_DATA=true
@@ -16,7 +16,7 @@ COPY . .
 EXPOSE 8080
 CMD ["npm", "run", "dev"]
 
-FROM node:22-bookworm-slim AS build
+FROM node:26-bookworm-slim AS build
 WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci
@@ -26,7 +26,7 @@ ARG GIT_COMMIT=""
 ENV GIT_COMMIT=$GIT_COMMIT
 RUN npm run build
 
-FROM node:22-bookworm-slim AS runner
+FROM node:26-bookworm-slim AS runner
 ARG GIT_COMMIT=""
 ARG VERSION=""
 LABEL org.opencontainers.image.title="Ribbon" \
