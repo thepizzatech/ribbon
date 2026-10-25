@@ -10,7 +10,7 @@ Your ledger (household name, people, gifts, occasions) is saved in a SQLite data
 
 ```bash
 git clone https://github.com/thepizzatech/ribbon && cd ribbon
-cp /dev/null .env            # optional: add APP_PASSCODE=... here (see below)
+# optional: create a .env file with APP_PASSCODE=... (see Settings below)
 docker compose -f docker-compose.prod.yml up -d --build
 ```
 
