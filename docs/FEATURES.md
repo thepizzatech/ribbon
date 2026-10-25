@@ -2,6 +2,17 @@
 
 A tour of what Ribbon does beyond the basic ledger. Everything here is in `0.3.0-dev`.
 
+![A person's page with a wishlist, a budget and a timeline (light)](assets/screenshots/wishlist-desktop-light.webp#only-light)
+![A person's page with a wishlist, a budget and a timeline (dark)](assets/screenshots/wishlist-desktop-dark.webp#only-dark)
+
+## The basics
+
+The **Overview** shows gifts this year (received, given, spent, thank-yous sent) against last year, upcoming dates, where the money went by occasion or person, budgets, and a **Needs you** list of thank-yous to write and gifts still to buy. The **Ledger** lists every gift, **People** lists everyone you give to or receive from (with what you gave and got), and a global search (`Ctrl`/`⌘` + `K`) finds anything. Ribbon is built for the phone first and follows your light or dark theme.
+
+## Ask
+
+If the server has an `XAI_API_KEY`, the **Ask** page answers plain-language questions about your ledger ("how much did we spend on birthdays?"). A question sends a trimmed copy of your gift list to xAI, so leave the key unset if you do not want that. Each login gets 30 questions an hour.
+
 ## Wishlists
 
 Every person has a wishlist (item, link, price, note). Anyone in the household can reserve or mark an item bought. **Surprise-safe:** the person whose list it is never sees reserved or purchased marks on their own list. The server strips them from the response, so it holds even if someone opens the API directly. "Convert to gift" turns an item into a planned gift and reserves it.
@@ -32,6 +43,9 @@ An instance can hold several households, each with its own private ledger. Owner
 
 ## Secret Santa
 
+![Secret Santa: the names are drawn (light)](assets/screenshots/secret-santa-desktop-light.webp#only-light)
+![Secret Santa: the names are drawn (dark)](assets/screenshots/secret-santa-desktop-dark.webp#only-dark)
+
 Create an exchange across your household or linked households: pick participants, add exclusions (couples, last year's match), check the draw is possible, then draw. Everyone sees only who they give to. The organiser sees the full draw only if they turned on "organiser peek" when setting it up.
 
 ## Sign-in options
@@ -45,12 +59,18 @@ Over HTTPS Ribbon offers "install" on phones and desktops, has an icon set and a
 
 ## Guided tour
 
+![The guided tour on a new install (light)](assets/screenshots/tour-desktop-light.webp#only-light)
+![The guided tour on a new install (dark)](assets/screenshots/tour-desktop-dark.webp#only-dark)
+
 Seven skippable steps (dashboard, add a gift, ledger, people, Ask, theme, settings and backups), built with [driver.js](https://driverjs.com) (MIT). It opens on a login's first visit, remembers "done" or "skipped" per login (`user_prefs.tour_state`, saved with `POST /api/me/tour`), and can be replayed from Settings → Help.
 
 - In development with `SEED_SAMPLE_DATA` on, the tour stays off unless `TOUR_IN_DEV=true`.
 - `TOUR_ALWAYS=true` shows it on every visit until it is finished with Done (for testing, in any mode).
 
 ## Welcome setup
+
+![Welcome setup, step 2 (light)](assets/screenshots/welcome-setup-desktop-light.webp#only-light)
+![Welcome setup, step 2 (dark)](assets/screenshots/welcome-setup-desktop-dark.webp#only-dark)
 
 The first visit creates only the owner account (and asks for `SETUP_CODE` when one is configured). Straight after the first sign-in the owner lands on a full-page **Welcome setup**: step one names the family or household, step two adds family members with a name and a role (son, wife, grandparent, friend and so on) and whether they are in your household. **Finish** opens the empty Overview, and the guided tour follows.
 

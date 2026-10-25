@@ -85,4 +85,4 @@ Severity is the impact if exploited on a typical home-hosted install. "Verified"
 
 ## Reporting
 
-See [SECURITY.md](SECURITY.md).
+See [SECURITY.md](../SECURITY.md).
