@@ -273,6 +273,16 @@ export const MIGRATIONS: Migration[] = [
       );
     `,
   },
+  {
+    id: 8,
+    name: "welcome setup state",
+    // Every household that exists when this runs already has its data, so it counts as set up (the default of 1).
+    // Only a household created by the first-run owner sign-up starts at 0 and goes through the Welcome setup.
+    sql: `
+      ALTER TABLE households ADD COLUMN setup_complete INTEGER NOT NULL DEFAULT 1;
+      ALTER TABLE households ADD COLUMN setup_step INTEGER NOT NULL DEFAULT 1;
+    `,
+  },
 ];
 
 export function dataDir(): string {

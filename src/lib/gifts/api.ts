@@ -89,6 +89,8 @@ export type Session = {
   user: AccountUser | null;
   csrfToken: string | null;
   household?: { id: string; name: string } | null;
+  /** The signed-in owner still has to finish the Welcome setup (the server keeps everything else closed). */
+  welcomeRequired?: boolean;
   sso?: SsoInfo;
   passkeys?: number;
   isAdmin?: boolean;
@@ -102,6 +104,9 @@ export type SetupInput = {
   username: string;
   password: string;
 };
+export type WelcomeMember = { name: string; relationship: string; role?: string; household: boolean };
+export type WelcomeState = { required: true; familyName: string; yourName: string; step: 1 | 2; members: WelcomeMember[] };
+export type WelcomeInput = { familyName?: string; yourName?: string; members?: WelcomeMember[]; step?: 1 | 2 };
 export type ImportPayload = Backup & { demo?: boolean; demoDismissed?: boolean };
 
 export const api = {
@@ -125,6 +130,9 @@ export const api = {
     setCsrfToken(null);
     return result;
   },
+  welcome: () => request<WelcomeState>("GET", "/api/welcome"),
+  saveWelcome: (input: WelcomeInput) => request<WelcomeState>("PUT", "/api/welcome", input),
+  finishWelcome: (input: WelcomeInput) => request<{ ok: true }>("POST", "/api/welcome/complete", input),
   changePassword: (current: string, next: string) =>
     request<{ ok: true }>("POST", "/api/account/password", { current, next }),
   users: () => request<{ users: AccountUser[] }>("GET", "/api/users"),

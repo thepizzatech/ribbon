@@ -538,14 +538,18 @@ export function firstHouseholdId(db: Db): string | undefined {
   return (db.prepare("SELECT id FROM households ORDER BY created_at, id LIMIT 1").get() as { id: string } | undefined)?.id;
 }
 
-/** Create a household with its default occasions and family members; returns its id. */
-export function createHousehold(db: Db, name: string, people: Person[]): string {
+/**
+ * Create a household with its default occasions and family members; returns its id.
+ * `pendingSetup` starts it in the Welcome setup (the first owner names the family and adds people after signing in).
+ */
+export function createHousehold(db: Db, name: string, people: Person[], options: { pendingSetup?: boolean } = {}): string {
   const hid = randomUUID();
   transaction(db, () => {
-    db.prepare("INSERT INTO households (id, name, demo, demo_dismissed, created_at) VALUES (?, ?, 0, 1, ?)").run(
+    db.prepare("INSERT INTO households (id, name, demo, demo_dismissed, created_at, setup_complete, setup_step) VALUES (?, ?, 0, 1, ?, ?, 1)").run(
       hid,
-      name.trim().slice(0, 80) || "Our household",
+      options.pendingSetup ? name.trim().slice(0, 80) : name.trim().slice(0, 80) || "Our household",
       new Date().toISOString(),
+      options.pendingSetup ? 0 : 1,
     );
     const insert = db.prepare(
       "INSERT INTO people (id, seq, name, role, circle, relationship, household_id, birthday, anniversary, shared) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",

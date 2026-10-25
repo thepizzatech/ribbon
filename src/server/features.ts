@@ -24,7 +24,7 @@ const sessionFieldProviders: ((db: Db, session: Session | null, request: Request
     passkeys: session ? listPasskeys(db, session.user.id).length : 0,
     isAdmin: session ? isInstanceAdmin(db, session.user) : false,
   }),
-  (db, session) => tourFields(db, session?.user.id ?? null),
+  (db, session) => tourFields(db, session?.user ?? null),
 ];
 export function extraSessionFields(db: Db, session: Session | null, request: Request): Record<string, unknown> {
   return Object.assign({}, ...sessionFieldProviders.map((provider) => provider(db, session, request)));

@@ -2,6 +2,8 @@
 import { seedSampleData, tourAlways, tourInDev } from "./config.ts";
 import type { Db } from "./db.ts";
 import { error, json, type Handler } from "./http.ts";
+import type { User } from "./users.ts";
+import { welcomePending } from "./welcome.ts";
 
 export type TourState = "done" | "skipped" | null;
 
@@ -18,10 +20,11 @@ export function tourAutoShow(state: TourState): boolean {
   return state === null;
 }
 
-export function tourFields(db: Db, userId: string | null) {
-  if (!userId) return { tour: null };
-  const t = getTour(db, userId);
-  return { tour: { state: t.state, at: t.at, autoShow: tourAutoShow(t.state) } };
+export function tourFields(db: Db, user: Pick<User, "id" | "role" | "householdId"> | null) {
+  if (!user) return { tour: null };
+  const t = getTour(db, user.id);
+  // The tour follows the Welcome setup: it never opens over the wizard.
+  return { tour: { state: t.state, at: t.at, autoShow: tourAutoShow(t.state) && !welcomePending(db, user) } };
 }
 
 export const tourHandler: Handler = (c) => {
@@ -32,5 +35,5 @@ export const tourHandler: Handler = (c) => {
   c.db
     .prepare("UPDATE user_prefs SET tour_state = ?, tour_at = ? WHERE user_id = ?")
     .run(state === "reset" ? null : state, state === "reset" ? null : new Date().toISOString(), c.session.user.id);
-  return json(tourFields(c.db, c.session.user.id));
+  return json(tourFields(c.db, c.session.user));
 };

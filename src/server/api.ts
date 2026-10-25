@@ -2,7 +2,7 @@
 // behind the TanStack Start route and in the tests. Feature modules (wishlists, budgets,
 // backups, ...) plug in through the two handler lists at the bottom of this file.
 import { randomUUID } from "node:crypto";
-import { normalizeRelationship, relationshipLabel, type Person } from "../lib/gifts/model.ts";
+import type { Person } from "../lib/gifts/model.ts";
 import { passwordLoginDisabled, seedSampleData, setupCode } from "./config.ts";
 import { clearCookies, readSessionToken, sessionCookie } from "./cookies.ts";
 import { getDb, type Db } from "./db.ts";
@@ -35,6 +35,7 @@ import {
 import { versionInfo } from "./version.ts";
 import { createHousehold, firstHouseholdId, getPerson, hasHousehold, householdRow, type Ctx } from "./ledger.ts";
 import { extraSessionFields, extraPublicHandlers, extraHandlers } from "./features.ts";
+import { allowedDuringWelcome, readMembers, welcomeHandler, welcomePending } from "./welcome.ts";
 
 export { readSessionToken } from "./cookies.ts";
 
@@ -57,31 +58,11 @@ export function sessionPayload(db: Db, session: Session | null, request: Request
     authed: Boolean(session),
     user: session?.user ?? null,
     household: household ? { id: household.id, name: household.name } : null,
+    // An owner whose household has not finished the Welcome setup is sent there (and the server holds the rest of the API closed).
+    welcomeRequired: session ? welcomePending(db, session.user) : false,
     csrfToken: session?.csrfToken ?? null,
     ...extraSessionFields(db, session, request),
   };
-}
-
-type Member = { name: string; relationship: string; role?: string; household: boolean };
-
-function readMembers(input: unknown): Person[] | string {
-  if (input === undefined) return [];
-  if (!Array.isArray(input) || input.length > 30) return "Add up to 30 family members.";
-  const people: Person[] = [];
-  for (const item of input as Partial<Member>[]) {
-    const name = typeof item?.name === "string" ? item.name.trim().slice(0, 80) : "";
-    if (!name) return "Every family member needs a name.";
-    const relationship = normalizeRelationship(item.relationship, item.role);
-    const custom = typeof item.role === "string" ? item.role.trim().slice(0, 40) : "";
-    people.push({
-      id: randomUUID(),
-      name,
-      relationship,
-      role: relationship === "other" && custom ? custom : relationshipLabel(relationship),
-      circle: item.household === false ? "outside" : "household",
-    });
-  }
-  return people;
 }
 
 /** The signed-in session for a request (used by server functions outside /api), or null. */
@@ -90,7 +71,7 @@ export function requestSession(request: Request, db?: Db): Session | null {
 }
 
 const PUBLIC_HANDLERS: PublicHandler[] = [...extraPublicHandlers];
-const HANDLERS: Handler[] = [accountHandler, ...extraHandlers, ledgerHandler];
+const HANDLERS: Handler[] = [accountHandler, welcomeHandler, ...extraHandlers, ledgerHandler];
 
 /** Used by sign-in flows (password, SSO, passkey) once the person is verified. */
 export function startSession(db: Db, userId: string, request: Request, extra: Record<string, unknown> = {}) {
@@ -150,6 +131,10 @@ export async function handleApi(request: Request, db?: Db): Promise<Response> {
       const response = json({ ok: true });
       for (const cookie of clearCookies()) response.headers.append("set-cookie", cookie);
       return response;
+    }
+
+    if (welcomePending(store, session.user) && !allowedDuringWelcome(resource, id, method)) {
+      return json({ error: "Finish the welcome setup first.", code: "welcome_setup_required" }, { status: 409 });
     }
 
     // JSON bodies are read for the usual write verbs; feature modules that take raw bytes read the request themselves.
@@ -214,41 +199,33 @@ async function setup(store: Db, request: Request, secure: boolean): Promise<Resp
   const problem = passwordProblem(body.password, username);
   if (problem) return error(400, problem);
   const existingHid = firstHouseholdId(store);
-  let hid = existingHid;
-  let selfId: string | null = null;
-  if (!existingHid) {
+  const yourName = typeof body.yourName === "string" ? body.yourName.trim().slice(0, 80) : "";
+  const passwordHash = await hashPassword(body.password as string);
+  // Hashing took a moment: make sure nobody else finished setup meanwhile. Everything below is synchronous.
+  if (userCount(store) > 0) return error(409, "Ribbon is already set up. Sign in instead.");
+  if (existingHid) {
+    // An upgrade from before accounts: the household already exists, only the owner login is missing.
+    const owner = createUser(store, { username, displayName: yourName || username, role: "owner", passwordHash, householdId: existingHid });
+    return startSessionWith(store, owner.id, request, 201);
+  }
+  const selfId = randomUUID();
+  let hid: string;
+  if (body.familyName !== undefined) {
+    // Optional, for scripts: a caller that already knows the family can skip the Welcome setup.
     const familyName = typeof body.familyName === "string" ? body.familyName.trim().slice(0, 80) : "";
     if (!familyName) return error(400, "Give your family a name.");
     const members = readMembers(body.people);
     if (typeof members === "string") return error(400, members);
-    const yourName = typeof body.yourName === "string" ? body.yourName.trim().slice(0, 80) : "";
-    selfId = randomUUID();
     const people: Person[] = [
       { id: selfId, name: yourName || username, role: "You", relationship: "self", circle: "household" },
       ...members,
     ];
-    const passwordHash = await hashPassword(body.password as string);
-    if (userCount(store) > 0) return error(409, "Ribbon is already set up. Sign in instead.");
     hid = createHousehold(store, familyName, people);
-    const owner = createUser(store, {
-      username,
-      displayName: typeof body.yourName === "string" && body.yourName.trim() ? body.yourName : username,
-      role: "owner",
-      passwordHash,
-      householdId: hid,
-      personId: selfId,
-    });
-    return startSessionWith(store, owner.id, request, 201);
+  } else {
+    // The normal first visit: just the owner. The Welcome setup after the first sign-in collects the rest.
+    hid = createHousehold(store, "", [{ id: selfId, name: yourName || username, role: "You", relationship: "self", circle: "household" }], { pendingSetup: true });
   }
-  const passwordHash = await hashPassword(body.password as string);
-  if (userCount(store) > 0) return error(409, "Ribbon is already set up. Sign in instead.");
-  const owner = createUser(store, {
-    username,
-    displayName: typeof body.yourName === "string" && body.yourName.trim() ? body.yourName : username,
-    role: "owner",
-    passwordHash,
-    householdId: hid,
-  });
+  const owner = createUser(store, { username, displayName: yourName || username, role: "owner", passwordHash, householdId: hid, personId: selfId });
   return startSessionWith(store, owner.id, request, 201);
 }
 

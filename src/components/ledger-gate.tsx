@@ -2,6 +2,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState, type ReactNode } from "react";
 import { Mark } from "@/components/mark";
 import { ImportPrompt, LoginForm, SetupFlow } from "@/components/auth";
+import { WelcomeSetup } from "@/components/welcome";
 import { Button } from "@/components/ui";
 import { api, onUnauthorized, type Session } from "@/lib/gifts/api";
 import { alreadyHandled, markHandled, readLocalLedger } from "@/lib/gifts/local-import";
@@ -39,11 +40,13 @@ export function LedgerGate({ children }: { children: ReactNode }) {
 
   const session = useQuery({ queryKey: SESSION_KEY, queryFn: api.session, refetchOnWindowFocus: false });
   const signedIn = Boolean(session.data?.authed);
+  // The owner's first sign-in lands on the Welcome setup; the server keeps the ledger closed until it is done.
+  const welcome = signedIn && session.data?.welcomeRequired === true;
 
   const ledger = useQuery({
     queryKey: LEDGER_KEY,
     queryFn: api.ledger,
-    enabled: signedIn,
+    enabled: signedIn && !welcome,
   });
 
   function accept(next: Session) {
@@ -113,6 +116,23 @@ export function LedgerGate({ children }: { children: ReactNode }) {
   if (!session.data) return <Loading />;
   if (session.data.setupRequired) return <SetupFlow session={session.data} onDone={accept} />;
   if (!signedIn) return <LoginForm session={session.data} onDone={accept} />;
+  if (welcome) {
+    return (
+      <WelcomeSetup
+        username={session.data.user?.displayName || session.data.user?.username || ""}
+        onDone={async () => {
+          // Setup is saved: reload the session (it now says the welcome is done) and open the empty Overview. The tour follows.
+          accept(await api.session());
+        }}
+        onSignOut={() => {
+          void api.logout().finally(() => {
+            queryClient.removeQueries({ queryKey: ["welcome"] });
+            void queryClient.invalidateQueries({ queryKey: SESSION_KEY });
+          });
+        }}
+      />
+    );
+  }
   if (ledger.isError && !ready) {
     return (
       <Centered>
