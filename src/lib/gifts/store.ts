@@ -4,6 +4,7 @@ import { send } from "@/lib/gifts/sync";
 import { toast } from "@/lib/toast";
 import {
   DEFAULT_OCCASIONS,
+  DEFAULT_OCCASION_DATES,
   SEED_GIFTS,
   SEED_PEOPLE,
   cleanOccasionName,
@@ -23,6 +24,7 @@ type LedgerState = {
   occasions: string[];
   demo: boolean;
   demoDismissed: boolean;
+  occasionDates: Record<string, string>;
   /** True once the first copy of the ledger has arrived from the server. */
   ready: boolean;
   /** Set when the server refused a change; the screen was put back to the server's copy. */
@@ -35,6 +37,7 @@ type LedgerState = {
   setHouseholdName: (name: string) => void;
   addOccasion: (name: string) => { ok: true } | { ok: false; reason: string };
   renameOccasion: (index: number, name: string) => { ok: true } | { ok: false; reason: string };
+  setOccasionDate: (name: string, date: string | null) => void;
   removeOccasion: (index: number) => { ok: true } | { ok: false; reason: string };
   addPerson: (person: Person) => void;
   updatePerson: (id: string, patch: Partial<Omit<Person, "id">>) => void;
@@ -55,6 +58,7 @@ function emptyLedger(): Ledger {
     occasions: [...DEFAULT_OCCASIONS],
     demo: false,
     demoDismissed: true,
+    occasionDates: {},
   };
 }
 
@@ -66,6 +70,7 @@ function freshHousehold(): Ledger {
     occasions: [...DEFAULT_OCCASIONS],
     demo: false,
     demoDismissed: true,
+    occasionDates: { ...DEFAULT_OCCASION_DATES },
   };
 }
 
@@ -77,6 +82,7 @@ function sampleLedger(): Ledger {
     occasions: [...DEFAULT_OCCASIONS],
     demo: true,
     demoDismissed: false,
+    occasionDates: { ...DEFAULT_OCCASION_DATES },
   };
 }
 
@@ -124,10 +130,20 @@ export const useLedger = create<LedgerState>()((set, get) => ({
     if (from === next) return { ok: true };
     set({
       occasions: occasions.map((item, itemIndex) => (itemIndex === index ? next : item)),
+      occasionDates: Object.fromEntries(
+        Object.entries(get().occasionDates).map(([key, value]) => [key === from ? next : key, value]),
+      ),
       gifts: get().gifts.map((gift) => (gift.occasion === from ? { ...gift, occasion: next } : gift)),
     });
     send(() => api.renameOccasion(from, next));
     return { ok: true };
+  },
+  setOccasionDate: (name, date) => {
+    const next = { ...get().occasionDates };
+    if (date) next[name] = date;
+    else delete next[name];
+    set({ occasionDates: next });
+    send(() => api.setOccasionDate(name, date));
   },
   removeOccasion: (index) => {
     const occasions = get().occasions;
@@ -199,6 +215,7 @@ export const useLedger = create<LedgerState>()((set, get) => ({
       people: backup.people,
       gifts: backup.gifts,
       occasions: backup.occasions.length > 0 ? backup.occasions : [...DEFAULT_OCCASIONS],
+      occasionDates: backup.occasionDates ?? {},
       demo: false,
       demoDismissed: true,
     };

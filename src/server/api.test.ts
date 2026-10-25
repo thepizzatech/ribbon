@@ -105,7 +105,7 @@ describe("storage", () => {
     delete process.env.SEED_SAMPLE_DATA;
     const db = openDb(tempDir());
     dbs.push(db);
-    assert.equal(db.prepare("SELECT COUNT(*) AS n FROM household").get()?.n, 0);
+    assert.equal(db.prepare("SELECT COUNT(*) AS n FROM households").get()?.n, 0);
   });
 
   test("migrations are recorded and safe to re-run", () => {
@@ -133,7 +133,7 @@ describe("storage", () => {
     raw.prepare(
       "INSERT INTO gifts (id, seq, direction, title, occasion, date, giver_id, receiver_id, amount, status, thanked, note) VALUES ('g', 1, 'given', 'Mug', 'Birthday', '2026-01-01', 'c', 'a', 5, 'idea', 0, '')",
     ).run();
-    assert.deepEqual(migrate(raw), [2]);
+    assert.deepEqual(migrate(raw), MIGRATIONS.slice(1).map((m) => m.id));
     const rows = raw.prepare("SELECT id, relationship FROM people ORDER BY seq").all();
     assert.deepEqual(
       rows.map((r) => [r.id, r.relationship]),
@@ -141,6 +141,12 @@ describe("storage", () => {
     );
     assert.equal(raw.prepare("SELECT COUNT(*) AS n FROM gifts").get()?.n, 1);
     assert.equal(raw.prepare("SELECT COUNT(*) AS n FROM users").get()?.n, 0);
+    // the old single household became the first household; everything points at it
+    const house = raw.prepare("SELECT id, name FROM households").get() as { id: string; name: string };
+    assert.equal(house.name, "Old House");
+    assert.equal(raw.prepare("SELECT COUNT(*) AS n FROM people WHERE household_id = ?").get(house.id)?.n, 3);
+    assert.equal(raw.prepare("SELECT COUNT(*) AS n FROM gifts WHERE household_id = ?").get(house.id)?.n, 1);
+    assert.equal(raw.prepare("SELECT COUNT(*) AS n FROM occasions WHERE household_id = ?").get(house.id)?.n, 0);
   });
 
   test("data survives closing and reopening the file", async () => {

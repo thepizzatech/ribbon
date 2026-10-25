@@ -125,6 +125,7 @@ export const api = {
   removeGift: (id: string) => request("DELETE", `/api/gifts/${enc(id)}`),
   addOccasion: (name: string) => request("POST", "/api/occasions", { name }),
   renameOccasion: (from: string, name: string) => request("PATCH", `/api/occasions/${enc(from)}`, { name }),
+  setOccasionDate: (name: string, date: string | null) => request("PATCH", `/api/occasions/${enc(name)}`, { date }),
   removeOccasion: (name: string) => request("DELETE", `/api/occasions/${enc(name)}`),
   importLedger: (payload: ImportPayload) => request<Ledger>("POST", "/api/import", payload),
 };

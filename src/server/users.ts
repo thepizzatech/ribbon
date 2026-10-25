@@ -5,7 +5,16 @@ import type { Db } from "./db.ts";
 import { hashPasswordSync } from "./password.ts";
 
 export type Role = "owner" | "member";
-export type User = { id: string; username: string; displayName: string; role: Role };
+export type User = {
+  id: string;
+  username: string;
+  displayName: string;
+  role: Role;
+  householdId: string;
+  /** The person in the ledger who is this user ("this is me"); their own surprises are hidden from them. */
+  personId: string | null;
+  email: string | null;
+};
 
 type UserRow = {
   id: string;
@@ -13,13 +22,22 @@ type UserRow = {
   display_name: string;
   role: Role;
   password_hash: string;
+  household_id: string;
+  person_id: string | null;
+  email: string | null;
 };
 
-const toUser = (row: Pick<UserRow, "id" | "username" | "display_name" | "role">): User => ({
+const USER_COLS = "id, username, display_name, role, household_id, person_id, email";
+type UserCols = Pick<UserRow, "id" | "username" | "display_name" | "role" | "household_id" | "person_id" | "email">;
+
+const toUser = (row: UserCols): User => ({
   id: row.id,
   username: row.username,
   displayName: row.display_name,
   role: row.role,
+  householdId: row.household_id,
+  personId: row.person_id,
+  email: row.email,
 });
 
 export const SESSION_DAYS = 14;
@@ -40,30 +58,67 @@ export function userCount(db: Db): number {
 
 export function findUserByName(db: Db, username: string): UserRow | undefined {
   return db
-    .prepare("SELECT id, username, display_name, role, password_hash FROM users WHERE username = ?")
+    .prepare(`SELECT ${USER_COLS}, password_hash FROM users WHERE username = ?`)
     .get(username) as UserRow | undefined;
 }
 
-export function listUsers(db: Db): User[] {
+export function listUsers(db: Db, householdId: string): User[] {
   return (
-    db.prepare("SELECT id, username, display_name, role FROM users ORDER BY created_at, username").all() as UserRow[]
+    db
+      .prepare(`SELECT ${USER_COLS} FROM users WHERE household_id = ? ORDER BY created_at, username`)
+      .all(householdId) as UserCols[]
   ).map(toUser);
+}
+
+export function getUser(db: Db, id: string): User | undefined {
+  const row = db.prepare(`SELECT ${USER_COLS} FROM users WHERE id = ?`).get(id) as UserCols | undefined;
+  return row ? toUser(row) : undefined;
 }
 
 export function createUser(
   db: Db,
-  input: { username: string; displayName?: string; role: Role; passwordHash: string },
+  input: {
+    username: string;
+    displayName?: string;
+    role: Role;
+    passwordHash: string;
+    householdId?: string;
+    personId?: string | null;
+    email?: string | null;
+  },
 ): User {
+  const householdId =
+    input.householdId ??
+    (db.prepare("SELECT id FROM households ORDER BY created_at, id LIMIT 1").get() as { id: string } | undefined)?.id ??
+    "h-main";
   const user: User = {
     id: randomUUID(),
     username: input.username,
     displayName: (input.displayName?.trim() || input.username).slice(0, 80),
     role: input.role,
+    householdId,
+    personId: input.personId ?? null,
+    email: input.email ?? null,
   };
   db.prepare(
-    "INSERT INTO users (id, username, display_name, role, password_hash, created_at) VALUES (?, ?, ?, ?, ?, ?)",
-  ).run(user.id, user.username, user.displayName, user.role, input.passwordHash, new Date().toISOString());
+    "INSERT INTO users (id, username, display_name, role, password_hash, created_at, household_id, person_id, email) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+  ).run(
+    user.id,
+    user.username,
+    user.displayName,
+    user.role,
+    input.passwordHash,
+    new Date().toISOString(),
+    householdId,
+    user.personId,
+    user.email,
+  );
   return user;
+}
+
+/** Link a login to the person in the ledger who is them (or clear it). */
+export function setUserPerson(db: Db, userId: string, personId: string | null) {
+  db.prepare("UPDATE users SET person_id = ? WHERE id = ?").run(personId, userId);
 }
 
 export function setPasswordHash(db: Db, userId: string, passwordHash: string) {
@@ -77,12 +132,14 @@ export function getPasswordHash(db: Db, userId: string): string | undefined {
 
 export type RemoveResult = { ok: true } | { ok: false; status: 404 | 409; reason: string };
 
-export function removeUser(db: Db, id: string, actingUserId: string): RemoveResult {
-  const row = db.prepare("SELECT id, role FROM users WHERE id = ?").get(id) as { id: string; role: Role } | undefined;
-  if (!row) return { ok: false, status: 404, reason: "That login is gone." };
+export function removeUser(db: Db, id: string, actingUserId: string, actingHouseholdId?: string): RemoveResult {
+  const row = db.prepare("SELECT id, role, household_id FROM users WHERE id = ?").get(id) as
+    | { id: string; role: Role; household_id: string }
+    | undefined;
+  if (!row || (actingHouseholdId && row.household_id !== actingHouseholdId)) return { ok: false, status: 404, reason: "That login is gone." };
   if (id === actingUserId) return { ok: false, status: 409, reason: "You can’t remove your own login." };
   if (row.role === "owner") {
-    const owners = (db.prepare("SELECT COUNT(*) AS n FROM users WHERE role = 'owner'").get() as { n: number }).n;
+    const owners = (db.prepare("SELECT COUNT(*) AS n FROM users WHERE role = 'owner' AND household_id = ?").get(row.household_id) as { n: number }).n;
     if (owners <= 1) return { ok: false, status: 409, reason: "Keep at least one owner." };
   }
   db.prepare("DELETE FROM users WHERE id = ?").run(id);
@@ -110,11 +167,12 @@ export function readSession(db: Db, token: string | undefined, now = Date.now())
   const id = hashToken(token);
   const row = db
     .prepare(
-      `SELECT s.id AS sid, s.csrf_token, s.expires_at, s.last_seen_at, u.id, u.username, u.display_name, u.role
+      `SELECT s.id AS sid, s.csrf_token, s.expires_at, s.last_seen_at, u.id, u.username, u.display_name, u.role,
+              u.household_id, u.person_id, u.email
        FROM sessions s JOIN users u ON u.id = s.user_id WHERE s.id = ?`,
     )
     .get(id) as
-    | (Pick<UserRow, "id" | "username" | "display_name" | "role"> & {
+    | (UserCols & {
         sid: string;
         csrf_token: string;
         expires_at: number;
@@ -198,6 +256,7 @@ export function ensureDevAccount(db: Db): User | null {
     displayName: "Dev admin",
     role: "owner",
     passwordHash: hashPasswordSync(password),
+    personId: db.prepare("SELECT id FROM people WHERE id = 'p-avery'").get() ? "p-avery" : null,
   });
   console.warn(
     `[ribbon] DEVELOPMENT ONLY: created owner login "${username}" with password "${password}" (SEED_SAMPLE_DATA is on). ` +

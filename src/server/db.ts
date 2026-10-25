@@ -3,7 +3,7 @@
 import { DatabaseSync } from "node:sqlite";
 import { mkdirSync } from "node:fs";
 import { join } from "node:path";
-import { DEFAULT_OCCASIONS, SEED_GIFTS, SEED_PEOPLE } from "../lib/gifts/model.ts";
+import { DEFAULT_OCCASIONS, DEFAULT_OCCASION_DATES, SEED_GIFTS, SEED_PEOPLE } from "../lib/gifts/model.ts";
 import { seedSampleData } from "./config.ts";
 import { ensureDevAccount } from "./users.ts";
 
@@ -90,6 +90,45 @@ export const MIGRATIONS: Migration[] = [
         ELSE 'other' END;
     `,
   },
+  {
+    id: 3,
+    name: "households, people details, occasion dates",
+    sql: `
+      CREATE TABLE households (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        demo INTEGER NOT NULL DEFAULT 0,
+        demo_dismissed INTEGER NOT NULL DEFAULT 1,
+        created_at TEXT NOT NULL
+      );
+      INSERT INTO households (id, name, demo, demo_dismissed, created_at)
+        SELECT 'h-main', name, demo, demo_dismissed, datetime('now') FROM household WHERE id = 1;
+      DROP TABLE household;
+      ALTER TABLE people ADD COLUMN household_id TEXT NOT NULL DEFAULT 'h-main';
+      ALTER TABLE people ADD COLUMN birthday TEXT;
+      ALTER TABLE people ADD COLUMN anniversary TEXT;
+      ALTER TABLE people ADD COLUMN shared INTEGER NOT NULL DEFAULT 0;
+      ALTER TABLE gifts ADD COLUMN household_id TEXT NOT NULL DEFAULT 'h-main';
+      ALTER TABLE users ADD COLUMN household_id TEXT NOT NULL DEFAULT 'h-main';
+      ALTER TABLE users ADD COLUMN person_id TEXT;
+      ALTER TABLE users ADD COLUMN email TEXT;
+      CREATE TABLE occasions_new (
+        seq INTEGER PRIMARY KEY AUTOINCREMENT,
+        household_id TEXT NOT NULL,
+        name TEXT NOT NULL,
+        month INTEGER,
+        day INTEGER,
+        UNIQUE (household_id, name)
+      );
+      INSERT INTO occasions_new (seq, household_id, name) SELECT seq, 'h-main', name FROM occasions;
+      DROP TABLE occasions;
+      ALTER TABLE occasions_new RENAME TO occasions;
+      UPDATE occasions SET month = 12, day = 25 WHERE name = 'Christmas';
+      CREATE INDEX people_household ON people (household_id);
+      CREATE INDEX gifts_household ON gifts (household_id);
+      CREATE INDEX users_household ON users (household_id);
+    `,
+  },
 ];
 
 export function dataDir(): string {
@@ -132,23 +171,36 @@ export function migrate(db: Db): number[] {
   return applied;
 }
 
+export const SEED_HOUSEHOLD_ID = "h-main";
+
 /** With SEED_SAMPLE_DATA on, a brand-new database starts with the sample household (development). */
 function seedIfEmpty(db: Db) {
-  const row = db.prepare("SELECT id FROM household WHERE id = 1").get();
+  const row = db.prepare("SELECT id FROM households LIMIT 1").get();
   if (row) return;
   transaction(db, () => {
-    db.prepare("INSERT INTO household (id, name, demo, demo_dismissed) VALUES (1, ?, 1, 0)").run("The Coles");
-    const person = db.prepare("INSERT INTO people (id, seq, name, role, circle, relationship) VALUES (?, ?, ?, ?, ?, ?)");
-    SEED_PEOPLE.forEach((p, i) => person.run(p.id, i + 1, p.name, p.role, p.circle, p.relationship));
-    const occasion = db.prepare("INSERT INTO occasions (name) VALUES (?)");
-    for (const name of DEFAULT_OCCASIONS) occasion.run(name);
+    db.prepare("INSERT INTO households (id, name, demo, demo_dismissed, created_at) VALUES (?, ?, 1, 0, ?)").run(
+      SEED_HOUSEHOLD_ID,
+      "The Coles",
+      new Date().toISOString(),
+    );
+    const person = db.prepare(
+      "INSERT INTO people (id, seq, name, role, circle, relationship, household_id, birthday, anniversary, shared) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+    );
+    SEED_PEOPLE.forEach((p, i) =>
+      person.run(p.id, i + 1, p.name, p.role, p.circle, p.relationship, SEED_HOUSEHOLD_ID, p.birthday ?? null, p.anniversary ?? null, p.shared ? 1 : 0),
+    );
+    const occasion = db.prepare("INSERT INTO occasions (household_id, name, month, day) VALUES (?, ?, ?, ?)");
+    for (const name of DEFAULT_OCCASIONS) {
+      const date = DEFAULT_OCCASION_DATES[name];
+      occasion.run(SEED_HOUSEHOLD_ID, name, date ? Number(date.slice(0, 2)) : null, date ? Number(date.slice(3)) : null);
+    }
     const gift = db.prepare(
-      `INSERT INTO gifts (id, seq, direction, title, occasion, date, giver_id, receiver_id, amount, status, thanked, note)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO gifts (id, seq, direction, title, occasion, date, giver_id, receiver_id, amount, status, thanked, note, household_id)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     );
     // Newest-first display order: the first seed gift gets the highest seq.
     SEED_GIFTS.forEach((g, i) =>
-      gift.run(g.id, SEED_GIFTS.length - i, g.direction, g.title, g.occasion, g.date, g.giverId, g.receiverId, g.amount, g.status, g.thanked ? 1 : 0, g.note),
+      gift.run(g.id, SEED_GIFTS.length - i, g.direction, g.title, g.occasion, g.date, g.giverId, g.receiverId, g.amount, g.status, g.thanked ? 1 : 0, g.note, SEED_HOUSEHOLD_ID),
     );
   });
 }

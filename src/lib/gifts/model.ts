@@ -71,7 +71,33 @@ export type Person = {
   role: string;
   circle: Circle;
   relationship: Relationship;
+  /** "YYYY-MM-DD", or "--MM-DD" when the year is not known. */
+  birthday?: string | null;
+  anniversary?: string | null;
+  /** Visible (name and wishlist) to households linked with this one. */
+  shared?: boolean;
 };
+
+/** Validate a date that may omit the year: "YYYY-MM-DD" or "--MM-DD". Returns the clean value or null. */
+export function cleanMonthDay(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  const text = value.trim();
+  const match = /^(?:(\d{4})|-)-(\d{2})-(\d{2})$/.exec(text);
+  if (!match) return null;
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  if (month < 1 || month > 12 || day < 1 || day > 31) return null;
+  const days = [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31][month - 1]!;
+  if (day > days) return null;
+  return text;
+}
+
+/** "MM-DD" for a yearly occasion date. */
+export function cleanOccasionDate(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  const m = /^(\d{2})-(\d{2})$/.exec(value.trim());
+  return m ? cleanMonthDay(`--${m[1]}-${m[2]}`)?.slice(2) ?? null : null;
+}
 
 export type Gift = {
   id: string;
@@ -92,7 +118,11 @@ export type Backup = {
   people: Person[];
   gifts: Gift[];
   occasions: string[];
+  occasionDates?: Record<string, string>;
 };
+
+/** Yearly dates ("MM-DD") a new household starts with. */
+export const DEFAULT_OCCASION_DATES: Record<string, string> = { Christmas: "12-25" };
 
 export const DEFAULT_OCCASIONS = [
   "Christmas",
@@ -124,11 +154,11 @@ const MONTHS = [
 const MONTH_LETTERS = ["J", "F", "M", "A", "M", "J", "J", "A", "S", "O", "N", "D"];
 
 export const SEED_PEOPLE: Person[] = [
-  { id: "p-avery", name: "Avery Cole", role: "You", circle: "household", relationship: "self" },
-  { id: "p-jordan", name: "Jordan Cole", role: "Partner", circle: "household", relationship: "partner" },
-  { id: "p-noah", name: "Noah Cole", role: "Child", circle: "household", relationship: "son" },
+  { id: "p-avery", name: "Avery Cole", role: "You", circle: "household", relationship: "self", birthday: "1988-03-14" },
+  { id: "p-jordan", name: "Jordan Cole", role: "Partner", circle: "household", relationship: "partner", birthday: "--11-30", anniversary: "2014-06-21", shared: true },
+  { id: "p-noah", name: "Noah Cole", role: "Child", circle: "household", relationship: "son", birthday: "2016-12-02", shared: true },
   { id: "p-june", name: "June Cole", role: "Child", circle: "household", relationship: "daughter" },
-  { id: "p-may", name: "May Ellison", role: "Aunt", circle: "outside", relationship: "aunt" },
+  { id: "p-may", name: "May Ellison", role: "Aunt", circle: "outside", relationship: "aunt", birthday: "--12-18" },
   { id: "p-priya", name: "Priya Shah", role: "Friend", circle: "outside", relationship: "friend" },
   { id: "p-eli", name: "Eli Brooks", role: "Coworker", circle: "outside", relationship: "other" },
   { id: "p-nguyen", name: "The Nguyens", role: "Neighbors", circle: "outside", relationship: "other" },
@@ -498,6 +528,9 @@ export function parseBackupData(data: unknown): Backup | null {
       role: person.role.slice(0, 40),
       circle: person.circle,
       relationship: normalizeRelationship((person as { relationship?: unknown }).relationship, person.role),
+      birthday: cleanMonthDay((person as { birthday?: unknown }).birthday),
+      anniversary: cleanMonthDay((person as { anniversary?: unknown }).anniversary),
+      shared: (person as { shared?: unknown }).shared === true,
     })),
     gifts: record.gifts.map((gift) => ({
       id: gift.id,
@@ -512,6 +545,7 @@ export function parseBackupData(data: unknown): Backup | null {
       thanked: gift.thanked,
       note: typeof gift.note === "string" ? gift.note.slice(0, 400) : "",
     })),
+    occasionDates: cleanOccasionDates((record as { occasionDates?: unknown }).occasionDates),
     occasions: normalizeOccasions(
       (record as { occasions?: unknown }).occasions,
       record.gifts.map((gift) => ({
@@ -519,6 +553,16 @@ export function parseBackupData(data: unknown): Backup | null {
       })),
     ),
   };
+}
+
+export function cleanOccasionDates(raw: unknown): Record<string, string> {
+  const out: Record<string, string> = {};
+  if (!raw || typeof raw !== "object") return out;
+  for (const [name, value] of Object.entries(raw as Record<string, unknown>)) {
+    const date = cleanOccasionDate(value);
+    if (date && name.trim()) out[name.trim().slice(0, 60)] = date;
+  }
+  return out;
 }
 
 export function statusLabel(status: GiftStatus): string {
@@ -565,6 +609,9 @@ export function cleanPerson(person: Person): Person {
     role: person.role.trim().slice(0, 40),
     circle: person.circle,
     relationship: normalizeRelationship((person as { relationship?: unknown }).relationship, person.role),
+    birthday: cleanMonthDay((person as { birthday?: unknown }).birthday),
+    anniversary: cleanMonthDay((person as { anniversary?: unknown }).anniversary),
+    shared: (person as { shared?: unknown }).shared === true,
   };
 }
 
@@ -589,4 +636,6 @@ export function cleanGift(gift: Gift): Gift {
 export type Ledger = Backup & {
   demo: boolean;
   demoDismissed: boolean;
+  /** Yearly dates for occasions ("MM-DD"), by occasion name. */
+  occasionDates: Record<string, string>;
 };
