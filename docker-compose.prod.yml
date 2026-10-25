@@ -1,0 +1,24 @@
+# Production / self-hosting on an Ubuntu box:
+#   docker compose -f docker-compose.prod.yml up -d --build
+# Then open http://<server>:8080
+# Optional settings go in a .env file next to this one (see README):
+#   APP_PASSCODE=...   XAI_API_KEY=...
+# Your ledger lives in the "ribbon_data" volume (SQLite file at /data/ribbon.db).
+services:
+  ribbon:
+    build:
+      context: .
+      target: runner
+    image: ribbon:latest
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    volumes:
+      - ribbon_data:/data
+    environment:
+      DATA_DIR: /data
+      APP_PASSCODE: ${APP_PASSCODE:-}
+      XAI_API_KEY: ${XAI_API_KEY:-}
+
+volumes:
+  ribbon_data:
