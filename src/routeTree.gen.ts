@@ -13,6 +13,9 @@ import { Route as AppRouteRouteImport } from './routes/_app/route'
 import { Route as AppIndexRouteImport } from './routes/_app/index'
 import { Route as AppAskRouteImport } from './routes/_app/ask'
 import { Route as AppLedgerRouteImport } from './routes/_app/ledger'
+import { Route as AppSantaRouteImport } from './routes/_app/santa'
+import { Route as AppSettingsRouteImport } from './routes/_app/settings'
+import { Route as AppSharedRouteImport } from './routes/_app/shared'
 import { Route as ApiSplatRouteImport } from './routes/api/$'
 import { Route as AppPeopleIndexRouteImport } from './routes/_app/people/index'
 import { Route as AppPeoplePersonIdRouteImport } from './routes/_app/people/$personId'
@@ -36,6 +39,21 @@ const AppLedgerRoute = AppLedgerRouteImport.update({
   path: '/ledger',
   getParentRoute: () => AppRouteRoute,
 } as any)
+const AppSantaRoute = AppSantaRouteImport.update({
+  id: '/santa',
+  path: '/santa',
+  getParentRoute: () => AppRouteRoute,
+} as any)
+const AppSettingsRoute = AppSettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => AppRouteRoute,
+} as any)
+const AppSharedRoute = AppSharedRouteImport.update({
+  id: '/shared',
+  path: '/shared',
+  getParentRoute: () => AppRouteRoute,
+} as any)
 const ApiSplatRoute = ApiSplatRouteImport.update({
   id: '/api/$',
   path: '/api/$',
@@ -56,6 +74,9 @@ export interface FileRoutesByFullPath {
   '/': typeof AppIndexRoute
   '/ask': typeof AppAskRoute
   '/ledger': typeof AppLedgerRoute
+  '/santa': typeof AppSantaRoute
+  '/settings': typeof AppSettingsRoute
+  '/shared': typeof AppSharedRoute
   '/api/$': typeof ApiSplatRoute
   '/people/$personId': typeof AppPeoplePersonIdRoute
   '/people/': typeof AppPeopleIndexRoute
@@ -63,6 +84,9 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/ask': typeof AppAskRoute
   '/ledger': typeof AppLedgerRoute
+  '/santa': typeof AppSantaRoute
+  '/settings': typeof AppSettingsRoute
+  '/shared': typeof AppSharedRoute
   '/api/$': typeof ApiSplatRoute
   '/': typeof AppIndexRoute
   '/people/$personId': typeof AppPeoplePersonIdRoute
@@ -73,6 +97,9 @@ export interface FileRoutesById {
   '/_app': typeof AppRouteRouteWithChildren
   '/_app/ask': typeof AppAskRoute
   '/_app/ledger': typeof AppLedgerRoute
+  '/_app/santa': typeof AppSantaRoute
+  '/_app/settings': typeof AppSettingsRoute
+  '/_app/shared': typeof AppSharedRoute
   '/api/$': typeof ApiSplatRoute
   '/_app/': typeof AppIndexRoute
   '/_app/people/$personId': typeof AppPeoplePersonIdRoute
@@ -81,14 +108,34 @@ export interface FileRoutesById {
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
-    '/' | '/ask' | '/ledger' | '/api/$' | '/people/$personId' | '/people/'
+    | '/'
+    | '/ask'
+    | '/ledger'
+    | '/santa'
+    | '/settings'
+    | '/shared'
+    | '/api/$'
+    | '/people/$personId'
+    | '/people/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/ask' | '/ledger' | '/api/$' | '/' | '/people/$personId' | '/people'
+  to:
+    | '/ask'
+    | '/ledger'
+    | '/santa'
+    | '/settings'
+    | '/shared'
+    | '/api/$'
+    | '/'
+    | '/people/$personId'
+    | '/people'
   id:
     | '__root__'
     | '/_app'
     | '/_app/ask'
     | '/_app/ledger'
+    | '/_app/santa'
+    | '/_app/settings'
+    | '/_app/shared'
     | '/api/$'
     | '/_app/'
     | '/_app/people/$personId'
@@ -130,6 +177,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppLedgerRouteImport
       parentRoute: typeof AppRouteRoute
     }
+    '/_app/santa': {
+      id: '/_app/santa'
+      path: '/santa'
+      fullPath: '/santa'
+      preLoaderRoute: typeof AppSantaRouteImport
+      parentRoute: typeof AppRouteRoute
+    }
+    '/_app/settings': {
+      id: '/_app/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof AppSettingsRouteImport
+      parentRoute: typeof AppRouteRoute
+    }
+    '/_app/shared': {
+      id: '/_app/shared'
+      path: '/shared'
+      fullPath: '/shared'
+      preLoaderRoute: typeof AppSharedRouteImport
+      parentRoute: typeof AppRouteRoute
+    }
     '/api/$': {
       id: '/api/$'
       path: '/api/$'
@@ -157,6 +225,9 @@ declare module '@tanstack/react-router' {
 interface AppRouteRouteChildren {
   AppAskRoute: typeof AppAskRoute
   AppLedgerRoute: typeof AppLedgerRoute
+  AppSantaRoute: typeof AppSantaRoute
+  AppSettingsRoute: typeof AppSettingsRoute
+  AppSharedRoute: typeof AppSharedRoute
   AppIndexRoute: typeof AppIndexRoute
   AppPeoplePersonIdRoute: typeof AppPeoplePersonIdRoute
   AppPeopleIndexRoute: typeof AppPeopleIndexRoute
@@ -165,6 +236,9 @@ interface AppRouteRouteChildren {
 const AppRouteRouteChildren: AppRouteRouteChildren = {
   AppAskRoute: AppAskRoute,
   AppLedgerRoute: AppLedgerRoute,
+  AppSantaRoute: AppSantaRoute,
+  AppSettingsRoute: AppSettingsRoute,
+  AppSharedRoute: AppSharedRoute,
   AppIndexRoute: AppIndexRoute,
   AppPeoplePersonIdRoute: AppPeoplePersonIdRoute,
   AppPeopleIndexRoute: AppPeopleIndexRoute,

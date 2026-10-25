@@ -1,9 +1,11 @@
-import { Plus, X } from "lucide-react";
-import { useState, type FormEvent, type ReactNode } from "react";
+import { browserSupportsWebAuthn, startAuthentication } from "@simplewebauthn/browser";
+import { KeyRound, Plus, X } from "lucide-react";
+import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 import { Mark } from "@/components/mark";
 import { RelationshipSelect } from "@/components/relationship-select";
 import { Button, Field, Switch, TextInput } from "@/components/ui";
 import { ApiError, api, type Session, type SetupInput } from "@/lib/gifts/api";
+import { xapi } from "@/lib/gifts/api-extra";
 import type { Relationship } from "@/lib/gifts/model";
 import { versionLabel } from "@/lib/version";
 
@@ -45,11 +47,46 @@ export function InsecureNotice({ session }: { session: Pick<Session, "secure" | 
   );
 }
 
+const SSO_MESSAGES: Record<string, string> = {
+  denied: "Sign-in was cancelled or refused by your provider.",
+  state: "That sign-in took too long or was opened twice. Try again.",
+  verify: "Couldn’t verify the sign-in with your provider. Try again, or ask the person who runs Ribbon.",
+  nolink: "That account isn’t linked to a Ribbon login. Ask an owner to add you, or sign in with a password and link it in Settings.",
+  provider: "Your sign-in provider isn’t reachable right now.",
+  session: "Couldn’t start your session. Try again.",
+  taken: "That account is already linked to a different login.",
+};
+
 export function LoginForm({ session, onDone }: { session: Session; onDone: (session: Session) => void }) {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
-  const [message, setMessage] = useState("");
+  const [message, setMessage] = useState(() => {
+    if (typeof window === "undefined") return "";
+    const code = new URLSearchParams(window.location.search).get("sso_error");
+    return code ? (SSO_MESSAGES[code] ?? "Single sign-on didn’t work.") : "";
+  });
   const [busy, setBusy] = useState(false);
+  const sso = session.sso?.enabled ? session.sso : null;
+  const passwordOff = Boolean(sso?.passwordDisabled);
+  const passkeys = typeof window !== "undefined" && window.isSecureContext && browserSupportsWebAuthn();
+
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).has("sso_error")) window.history.replaceState(null, "", window.location.pathname);
+  }, []);
+
+  async function passkeyLogin() {
+    setBusy(true);
+    setMessage("");
+    try {
+      const { options, challengeId } = await xapi.passkeyLoginOptions();
+      const response = await startAuthentication({ optionsJSON: options as Parameters<typeof startAuthentication>[0]["optionsJSON"] });
+      onDone(await xapi.passkeyLogin(challengeId, response));
+    } catch (error) {
+      setMessage(error instanceof Error && error.name === "NotAllowedError" ? "That was cancelled." : messageOf(error, "Couldn’t sign in with a passkey."));
+    } finally {
+      setBusy(false);
+    }
+  }
 
   async function submit(event: FormEvent) {
     event.preventDefault();
@@ -67,6 +104,23 @@ export function LoginForm({ session, onDone }: { session: Session; onDone: (sess
   return (
     <AuthFrame title="Sign in" lead="Use the login you or your family set up for Ribbon.">
       <InsecureNotice session={session} />
+      {sso ? (
+        <a className="btn btn-primary btn-block press" href="/api/auth/oidc/start">
+          {sso.label || "Sign in with single sign-on"}
+        </a>
+      ) : null}
+      {passkeys ? (
+        <Button type="button" variant="secondary" block disabled={busy} onClick={() => void passkeyLogin()}>
+          <KeyRound size={16} strokeWidth={1.5} /> Sign in with a passkey
+        </Button>
+      ) : null}
+      {passwordOff ? (
+        message ? (
+          <p className="auth-error" role="alert">
+            {message}
+          </p>
+        ) : null
+      ) : (
       <form className="auth-form" onSubmit={submit}>
         <Field label="Username or email">
           <TextInput
@@ -95,6 +149,7 @@ export function LoginForm({ session, onDone }: { session: Session; onDone: (sess
           {busy ? "Signing in…" : "Sign in"}
         </Button>
       </form>
+      )}
     </AuthFrame>
   );
 }

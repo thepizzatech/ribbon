@@ -10,8 +10,7 @@ export type Overlay =
       giverId?: string;
       receiverId?: string;
     }
-  | { type: "person"; id: string | null }
-  | { type: "settings" };
+  | { type: "person"; id: string | null };
 
 type OverlayApi = {
   overlay: Overlay;

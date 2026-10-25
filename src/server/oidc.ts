@@ -81,7 +81,7 @@ const redirect = (to: string, headers: Record<string, string> = {}, cookies: str
   return new Response(null, { status: 302, headers: h });
 };
 const failure = (code: string, secure: boolean, link = false) =>
-  redirect(`${link ? "/settings" : "/"}?sso_error=${code}`, {}, [clearFlowCookie(secure)]);
+  redirect(`${link ? "/settings?tab=account&" : "/?"}sso_error=${code}`, {}, [clearFlowCookie(secure)]);
 
 function flowCookie(state: string, secure: boolean) {
   return `${FLOW_COOKIE}=${state}; Path=/api/auth/oidc; HttpOnly; SameSite=Lax; Max-Age=${FLOW_MS / 1000}${secure ? "; Secure" : ""}`;
@@ -214,7 +214,7 @@ export const oidcPublicHandler: PublicHandler = async (c) => {
         c.db.prepare("INSERT OR REPLACE INTO oidc_identities (issuer, subject, user_id, email, created_at) VALUES (?, ?, ?, ?, ?)").run(
           cfg.issuer, claims.sub, row.link_user_id, typeof claims.email === "string" ? claims.email : null, new Date().toISOString(),
         );
-        return redirect("/settings?sso=linked", {}, [clearFlowCookie(secure)]);
+        return redirect("/settings?tab=account&sso=linked", {}, [clearFlowCookie(secure)]);
       }
       const found = findUserForClaims(c.db, cfg, claims);
       if ("error" in found) return failure(found.error, secure);

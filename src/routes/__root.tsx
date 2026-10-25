@@ -1,5 +1,14 @@
 import { createRootRoute, HeadContent, Outlet, Scripts } from "@tanstack/react-router";
+import { useEffect } from "react";
+import { initPwa } from "@/lib/pwa";
 import appCss from "../styles.css?url";
+
+function PwaInit() {
+  useEffect(() => {
+    initPwa();
+  }, []);
+  return null;
+}
 
 const APP_NAME = "Ribbon";
 
@@ -31,6 +40,7 @@ export const Route = createRootRoute({
         />
       </head>
       <body>
+        <PwaInit />
         <Outlet />
         <Scripts />
       </body>

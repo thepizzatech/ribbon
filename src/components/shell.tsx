@@ -4,7 +4,9 @@ import {
   Bell,
   BookOpen,
   CircleHelp,
+  Gift,
   House,
+  Shuffle,
   MessageCircle,
   Moon,
   Plus,
@@ -19,22 +21,29 @@ import { Mark } from "@/components/mark";
 import { OverlayProvider, useOverlay } from "@/components/overlay";
 import { GiftSheet } from "@/components/gift-sheet";
 import { PersonSheet } from "@/components/person-sheet";
-import { SettingsSheet } from "@/components/settings-sheet";
 import { Toaster } from "@/components/toaster";
 import { api } from "@/lib/gifts/api";
 import { needsYou } from "@/lib/gifts/insights";
 import { useLedger } from "@/lib/gifts/store";
 import { setTheme, useTheme } from "@/lib/theme";
+import { useSession } from "@/lib/gifts/use-session";
+import { startTour } from "@/lib/tour";
 import { versionLabel } from "@/lib/version";
 import { cn } from "@/lib/utils";
 
-type NavItem = { to: "/" | "/ledger" | "/people" | "/ask"; label: string; icon: LucideIcon; exact: boolean };
+type NavItem = { to: "/" | "/ledger" | "/people" | "/ask" | "/shared" | "/santa"; label: string; icon: LucideIcon; exact: boolean };
 
 const NAV: readonly NavItem[] = [
   { to: "/", label: "Overview", icon: House, exact: true },
   { to: "/ledger", label: "Ledger", icon: BookOpen, exact: false },
   { to: "/people", label: "People", icon: Users, exact: false },
   { to: "/ask", label: "Ask", icon: MessageCircle, exact: false },
+];
+
+/** Sidebar-only extras: reachable on a phone from the People page. */
+const MORE: readonly NavItem[] = [
+  { to: "/shared", label: "Shared wishlists", icon: Gift, exact: false },
+  { to: "/santa", label: "Secret Santa", icon: Shuffle, exact: false },
 ];
 
 function isActive(pathname: string, to: string, exact: boolean) {
@@ -71,6 +80,7 @@ function NavLinks({ variant, items }: { variant: "dock" | "side"; items: readonl
             key={item.to}
             to={item.to}
             aria-current={active ? "page" : undefined}
+            data-tour={`nav-${item.label.toLowerCase()}`}
             className={cn(variant === "dock" ? "nav-link" : "side-link", active && "is-active")}
             onClick={() => {
               if (item.to === "/ledger") setListFocus("all");
@@ -91,6 +101,7 @@ function ThemeButton({ className }: { className?: string }) {
     <button
       type="button"
       className={cn("icon-btn press", className)}
+      data-tour="theme"
       aria-label={theme === "dark" ? "Switch to light theme" : "Switch to dark theme"}
       onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
     >
@@ -146,7 +157,6 @@ function initials(name: string) {
 }
 
 function Sidebar() {
-  const { open } = useOverlay();
   const household = useLedger((state) => state.householdName);
   const user = useQuery({ queryKey: ["session"], queryFn: api.session, refetchOnWindowFocus: false }).data?.user;
   const gifts = useLedger((state) => state.gifts);
@@ -165,7 +175,7 @@ function Sidebar() {
       <nav className="mt-3 flex flex-col gap-1" aria-label="Primary">
         <NavLinks variant="side" items={NAV.slice(0, 2)} />
         <p className="nav-kicker">Explore</p>
-        <NavLinks variant="side" items={NAV.slice(2)} />
+        <NavLinks variant="side" items={[...NAV.slice(2), ...MORE]} />
       </nav>
       <div className="mt-auto flex flex-col gap-1">
         <button
@@ -184,10 +194,10 @@ function Sidebar() {
             </span>
           ) : null}
         </button>
-        <button type="button" className="side-link" onClick={() => open({ type: "settings" })}>
+        <Link to="/settings" search={{}} className="side-link" data-tour="nav-settings" activeProps={{ "aria-current": "page", className: "side-link is-active" }}>
           <Settings size={18} strokeWidth={1.5} />
           Settings
-        </button>
+        </Link>
         <a
           className="side-link"
           href="https://github.com/thepizzatech/ribbon#readme"
@@ -221,13 +231,14 @@ function Topbar() {
       <Wordmark />
       <div className="flex items-center gap-1">
         <ThemeButton />
-        <button type="button" className="icon-btn press" aria-label="Settings" onClick={() => open({ type: "settings" })}>
+        <Link to="/settings" search={{}} className="icon-btn press" aria-label="Settings" data-tour="nav-settings">
           <Settings size={18} strokeWidth={1.5} />
-        </button>
+        </Link>
         <button
           type="button"
           className="btn btn-primary btn-pill press"
           aria-label="Log a gift"
+          data-tour="add-gift"
           onClick={() => open({ type: "gift", id: null })}
         >
           <Plus size={16} strokeWidth={1.75} />
@@ -238,7 +249,31 @@ function Topbar() {
   );
 }
 
+/** Opens the tour once per browser tab session when the server says this login should see it. */
+function useTourAutostart() {
+  const session = useSession();
+  const navigate = useNavigate();
+  const autoShow = session.data?.tour?.autoShow === true;
+  useEffect(() => {
+    if (!autoShow) return;
+    const timer = window.setTimeout(() => {
+      if (sessionStorage.getItem("ribbon-tour-auto")) return;
+      sessionStorage.setItem("ribbon-tour-auto", "1");
+      void startTour({
+        beforeStart: async () => {
+          if (window.location.pathname !== "/") {
+            await navigate({ to: "/" });
+            await new Promise((resolve) => setTimeout(resolve, 250));
+          }
+        },
+      });
+    }, 900);
+    return () => window.clearTimeout(timer);
+  }, [autoShow, navigate]);
+}
+
 function Frame() {
+  useTourAutostart();
   const pathname = useRouterState({ select: (state) => state.location.pathname });
   return (
     <div className="app">
@@ -261,7 +296,6 @@ function Frame() {
       </div>
       <GiftSheet />
       <PersonSheet />
-      <SettingsSheet />
       <Toaster />
     </div>
   );
