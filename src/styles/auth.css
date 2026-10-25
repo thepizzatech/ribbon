@@ -79,9 +79,9 @@
 }
 
 .auth-error {
-  border: 1px solid color-mix(in oklab, var(--color-out) 40%, transparent);
+  border: 1px solid color-mix(in oklab, var(--color-deduct) 45%, transparent);
   border-radius: 10px;
-  background: color-mix(in oklab, var(--color-out) 8%, transparent);
+  background: color-mix(in oklab, var(--color-deduct) 8%, transparent);
   padding: 10px 12px;
   color: var(--color-foreground);
   font-size: 0.8125rem;

@@ -70,10 +70,11 @@ export function LedgerGate({ children }: { children: ReactNode }) {
   }, [queryClient]);
 
   // A ledger that older versions kept in this browser is only offered, never pushed up on its own,
-  // and only when the server has no gifts yet (so a freshly set-up family is never overwritten).
+  // and only when the server has no real gifts yet (so a family already using Ribbon is never overwritten).
   const [offer, setOffer] = useState<ReturnType<typeof readLocalLedger>>(null);
   const firstLoad = ledger.isSuccess;
-  const serverGifts = ledger.data?.gifts.length ?? 0;
+  // Real data on the server (gifts that are not the sample household) is never overwritten.
+  const serverHasRealData = Boolean(ledger.data && ledger.data.gifts.length > 0 && !ledger.data.demo);
   useEffect(() => {
     if (!firstLoad || importResolved) return;
     if (alreadyHandled()) return setImportResolved(true);
@@ -86,12 +87,12 @@ export function LedgerGate({ children }: { children: ReactNode }) {
       markHandled("skipped"); // only the sample household, or nothing worth moving
       return setImportResolved(true);
     }
-    if (serverGifts > 0) {
+    if (serverHasRealData) {
       markHandled("skipped"); // the server already holds real data; never overwrite it
       return setImportResolved(true);
     }
     setOffer(local);
-  }, [firstLoad, importResolved, serverGifts]);
+  }, [firstLoad, importResolved, serverHasRealData]);
 
   // Mirror the server's copy into the store, unless local changes are still on their way up.
   useEffect(() => {

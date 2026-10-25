@@ -29,7 +29,7 @@ First development build of 0.2. Not released yet: `main` is the development bran
 
 ### Changed
 
-- A ledger saved by an older browser-only version is now offered for import once after sign-in, instead of being copied automatically. It is only offered when the server has no gifts yet.
+- A ledger saved by an older browser-only version is now offered for import once after sign-in, instead of being copied automatically. It is only offered when the server has no gifts of its own yet (or only the sample household).
 - Database migration 2 (additive): `users` and `sessions` tables and `people.relationship`. Existing data is untouched.
 
 ## [0.1.0] - 2026-10-23
