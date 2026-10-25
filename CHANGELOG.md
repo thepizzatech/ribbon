@@ -4,6 +4,14 @@ All notable changes to Ribbon are recorded here. The format follows [Keep a Chan
 
 ## [Unreleased]
 
+### Added
+
+- **Documentation site** at <https://ribbon.thepizza.tech> (MkDocs Material, built from `docs/` and published to GitHub Pages by the new Docs workflow): getting started, a full configuration reference, a guide to securing your install, features, backups and restore, upgrading, troubleshooting and contributing. The existing docs pages are part of it.
+
+### Changed
+
+- The README is rewritten with screenshots (light and dark, desktop and phone), a quick start for the `dev` image tag and a short configuration table; the detail now lives on the docs site.
+
 ## [0.3.0-dev.2] - 2026-10-25
 
 Development build. Adds the Welcome setup and the result of a full security review ([docs/SECURITY-AUDIT.md](docs/SECURITY-AUDIT.md)).
