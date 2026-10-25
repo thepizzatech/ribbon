@@ -106,6 +106,9 @@ export const xapi = {
     request<CsvResult>("POST", "/api/csv/import", { type, text, mapping, createPeople }),
   csvUrl: (kind: "export" | "template", type: CsvType) => `/api/csv/${kind}?type=${type}`,
 
+  households: () => request<{ households: { id: string; name: string; logins: number; owner: string; mine: boolean }[] }>("GET", "/api/households"),
+  addHousehold: (input: { familyName: string; yourName: string; username: string; password: string }) =>
+    request<{ household: { id: string; name: string } }>("POST", "/api/households", input),
   sharing: () => request<SharingSummary>("GET", "/api/sharing"),
   invite: () => request<{ code: string; expiresAt: number }>("POST", "/api/sharing/invite", {}),
   join: (code: string) => request<SharingSummary>("POST", "/api/sharing/join", { code }),

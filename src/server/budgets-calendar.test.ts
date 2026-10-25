@@ -78,7 +78,7 @@ describe("calendar feed", () => {
     assert.match(text, /DTSTART;VALUE=DATE:\d{8}/);
     for (const line of text.split("\r\n")) assert.ok(Buffer.byteLength(line) <= 75, line);
     // your own birthday doesn't list what's still to buy
-    assert.ok(!/Avery’s birthday[\s\S]{0,200}Still to buy: Avery/.test(text));
+    assert.ok(!/Avery’s birthday[\s\S]{0,200}Still to buy for: Avery/.test(text));
     // turning reminders off removes the shopping events
     assert.equal((await call(db, "PATCH", "/api/calendar", { remindDays: 0 }, me)).body.remindDays, 0);
     assert.ok(!(await call(db, "GET", `/api/calendar/${token}.ics`)).text.includes("Start shopping"));

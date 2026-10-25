@@ -169,3 +169,30 @@ describe("linking households", () => {
     assert.equal(redeemInvite(db, old.code, rivera.householdId).ok, false);
   });
 });
+
+describe("adding another household", () => {
+  test("only the instance admin can, and the new owner gets an empty ledger of their own", async () => {
+    const db = freshDb();
+    const admin = signedIn(db, { username: "avery", personId: "p-avery" });
+    const member = signedIn(db, { username: "may", role: "member" });
+    const body = { familyName: "The Okafors", yourName: "Ada", username: "ada", password: "correct horse battery staple" };
+    assert.equal((await call(db, "POST", "/api/households", body, member)).status, 403);
+    assert.equal((await call(db, "POST", "/api/households", body, null)).status, 401);
+    const made = await call(db, "POST", "/api/households", body, admin);
+    assert.equal(made.status, 201);
+    assert.equal((await call(db, "POST", "/api/households", body, admin)).status, 409, "username is taken");
+    assert.equal((await call(db, "POST", "/api/households", { ...body, username: "ada2", password: "short" }, admin)).status, 400);
+    const list = (await call(db, "GET", "/api/households", undefined, admin)).body.households;
+    assert.deepEqual(list.map((h: { name: string }) => h.name).sort(), ["The Coles", "The Okafors"]);
+    // the new owner signs in with the password and sees only their own household
+    const login = await call(db, "POST", "/api/login", { username: "ada", password: body.password });
+    assert.equal(login.status, 200);
+    const cookie = login.headers.get("set-cookie")!.split(";")[0]!;
+    const ledger = (await call(db, "GET", "/api/ledger", undefined, { cookie, csrf: login.body.csrfToken })).body;
+    assert.equal(ledger.householdName, "The Okafors");
+    assert.deepEqual(ledger.people.map((p: { name: string }) => p.name), ["Ada"]);
+    assert.equal(ledger.gifts.length, 0);
+    // and cannot add households themselves (they are not the instance admin)
+    assert.equal((await call(db, "POST", "/api/households", { ...body, username: "x1y2z3" }, { cookie, csrf: login.body.csrfToken })).status, 403);
+  });
+});

@@ -4,6 +4,7 @@ import type { Handler, PublicHandler } from "./http.ts";
 import type { Session } from "./users.ts";
 import { wishlistHandler } from "./wishlist.ts";
 import { sharingHandler } from "./sharing.ts";
+import { householdsHandler } from "./households.ts";
 import { exchangeHandler } from "./secretsanta.ts";
 import { oidcHandler, oidcPublicHandler, oidcSummary } from "./oidc.ts";
 import { passkeyHandler, passkeyPublicHandler, listPasskeys } from "./passkeys.ts";
@@ -14,7 +15,7 @@ import { budgetsHandler } from "./budgets.ts";
 import { calendarHandler, calendarPublicHandler } from "./calendar.ts";
 
 export const extraPublicHandlers: PublicHandler[] = [calendarPublicHandler, oidcPublicHandler, passkeyPublicHandler];
-export const extraHandlers: Handler[] = [wishlistHandler, budgetsHandler, calendarHandler, backupsHandler, csvHandler, sharingHandler, exchangeHandler, oidcHandler, passkeyHandler, tourHandler];
+export const extraHandlers: Handler[] = [wishlistHandler, budgetsHandler, calendarHandler, backupsHandler, csvHandler, householdsHandler, sharingHandler, exchangeHandler, oidcHandler, passkeyHandler, tourHandler];
 
 /** Extra fields feature modules add to GET /api/session. */
 const sessionFieldProviders: ((db: Db, session: Session | null, request: Request) => Record<string, unknown>)[] = [

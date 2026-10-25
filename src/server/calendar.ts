@@ -96,7 +96,7 @@ export function buildCalendar(db: Db, user: User, now = new Date()): string {
   const describe = (event: Upcoming) => {
     const bits: string[] = [];
     if (event.turning) bits.push(event.kind === "birthday" ? `Turning ${event.turning}` : `${event.turning} years`);
-    if (event.toBuy.length > 0) bits.push(`Still to buy: ${event.toBuy.map((t) => t.name).join(", ")}`);
+    if (event.toBuy.length > 0) bits.push(`Still to buy for: ${event.toBuy.map((t) => t.name).join(", ")}`);
     else if (event.covered > 0) bits.push("Everything is bought");
     return bits.join("\n");
   };
