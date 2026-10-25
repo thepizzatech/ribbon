@@ -1,8 +1,8 @@
 # Ribbon
 
-A mobile-first family gift tracker you host yourself. Track gifts your household gives and receives, see what needs you (thank-yous, gifts still to buy), look back over the year, and ask plain-language questions about your ledger. Light and dark themes.
+A mobile-first family gift tracker you host yourself. Track gifts your household gives and receives, see what needs you (thank-yous, gifts still to buy), look back over the year, and ask plain-language questions about your ledger. Light and dark themes. Wishlists, budgets, upcoming dates and a calendar feed, sharing between households, Secret Santa, single sign-on and passkeys, scheduled backups, CSV import and export, and a guided tour. See [docs/FEATURES.md](docs/FEATURES.md).
 
-> **Status: pre-release (`0.2.0-dev`).** It works and keeps your data on your own server, but expect rough edges. It is built for one family.
+> **Status: pre-release (`0.3.0-dev`).** It works and keeps your data on your own server, but expect rough edges. It is built for one family.
 
 Everything (family, people, gifts, occasions, logins) lives in one SQLite file on the server, so every phone and laptop sees the same data.
 
@@ -36,6 +36,13 @@ Put these in a `.env` file next to the compose file (see `.env.example`; never c
 | `HSTS` | on | `off` disables the Strict-Transport-Security header (only sent over HTTPS anyway). |
 | `SETUP_CODE` | unset | If set, whoever creates the first owner login must type it. |
 | `XAI_API_KEY` | unset | Turns on the Ask page. A question sends a trimmed copy of your gift list to xAI. |
+| `OIDC_ISSUER`, `OIDC_CLIENT_ID`, `OIDC_CLIENT_SECRET` | unset | Turn on single sign-on (see [docs/FEATURES.md](docs/FEATURES.md#sign-in-options)). |
+| `OIDC_SCOPES`, `OIDC_AUTO_LINK_BY_EMAIL`, `OIDC_BUTTON_LABEL`, `OIDC_ALLOW_HTTP_ISSUER` | see docs | SSO tuning. |
+| `DISABLE_PASSWORD_LOGIN` | `false` | Hide password sign-in when SSO is configured. |
+| `BACKUP_CRON` | `0 3 * * *` | Five-field cron for scheduled backups; `off` disables. |
+| `BACKUP_KEEP` | `14` | How many scheduled backups to keep. |
+| `TOUR_ALWAYS` | `false` | Show the guided tour on every sign-in until finished (testing). |
+| `TOUR_IN_DEV` | `false` | Allow the auto-opening tour in sample-data development mode. |
 | `SEED_SAMPLE_DATA` | `false` in production, `true` in development | Loads a sample household into a brand-new database. |
 | `DATA_DIR` | `/data` | Folder holding `ribbon.db`. |
 | `GIT_COMMIT` | unset | Short commit SHA shown in Settings → About. Set at build time. |
@@ -62,6 +69,7 @@ Your data volume is kept and migrated in place. Coming from a version before acc
 
 Your data is one file, `ribbon.db`, inside the `ribbon_data` volume. Either:
 
+- **Scheduled backups:** Ribbon snapshots the database nightly into `/data/backups` and keeps the newest 14. Settings → Data lists them, lets you download one, take one now, or restore one (a safety copy is taken first).
 - **Export from the app:** Settings → Export ledger saves a JSON file (gifts, people, occasions; not logins). Import restores it. The same JSON is at `/api/export` when signed in.
 - **Copy the database file** (logins and sessions included). Stop the app for a perfectly clean copy:
 

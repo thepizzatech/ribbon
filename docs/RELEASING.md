@@ -4,6 +4,7 @@
 
 - **`main`** is development. Everything lands here first. Its version is `X.Y.0-dev.N` (for example `0.2.0-dev.1`).
 - **`release/X.Y`** (for example `release/0.2`) is cut from `main` when a version is ready to be tried by real users. Only fixes go there afterwards.
+- **`:dev` image.** Every push to `main` publishes `ghcr.io/thepizzatech/ribbon:dev` (and `:sha-<short>`) via `.github/workflows/publish-dev.yml`; no tag is needed.
 - **Tags** `vX.Y.Z[-pre.N]` mark releases and are what publish them. Tags are only created on a `release/*` branch.
 
 ## Versions

@@ -4,6 +4,29 @@ All notable changes to Ribbon are recorded here. The format follows [Keep a Chan
 
 ## [Unreleased]
 
+## [0.3.0-dev.1] - 2026-10-25
+
+Development build. Not released: `main` stays the development branch. Details of each feature: [docs/FEATURES.md](docs/FEATURES.md).
+
+### Added
+
+- **Wishlists** per person with surprise-safe reserve and purchased marks (hidden from the list's owner by the server), and "convert to gift".
+- **Budgets** per person or occasion, **upcoming dates** (birthdays, anniversaries, recurring occasions) and a secret-link **calendar feed (.ics)** with reminders.
+- **Scheduled SQLite backups** (`BACKUP_CRON`, `BACKUP_KEEP`) with download, back-up-now and restore.
+- **CSV import and export** with a template, column mapping and a preview.
+- **Households as separate ledgers**, with **sharing between households** (invite, choose shared people, unlink) and server-side visibility checks.
+- **Secret Santa** across linked households, with exclusions and a derangement draw.
+- **Single sign-on** (OIDC with PKCE) and **passkeys**.
+- **Settings page** (general, account, data, sharing, help).
+- **PWA**: manifest, icons, service worker, offline page.
+- **Guided tour** (driver.js, seven skippable steps), replayable from Settings → Help. State is saved per login via `POST /api/me/tour`. Off by default in sample-data development mode; `TOUR_ALWAYS=true` forces it.
+- A `ghcr.io/thepizzatech/ribbon:dev` image is published from every push to `main`.
+
+### Changed
+
+- Version bumped to 0.3.0-dev.1.
+- A production image never contains sample data; first run asks for the family name, members and roles.
+
 ### Breaking
 
 - **The bundled Caddy proxy is gone.** `docker-compose.prod.yml`, `deploy/caddy-entrypoint.sh` and the `SITE_ADDRESS`, `HTTP_PORT`, `HTTPS_PORT` and `TLS_MODE` settings no longer exist, and Ribbon no longer redirects HTTP to HTTPS itself. Ribbon listens on plain HTTP, port 8080, and `docker-compose.yml` publishes `${PORT:-8080}:8080`. Put your own HTTPS proxy in front (see `docs/REVERSE-PROXY.md`), or use the optional `docker-compose.caddy.yml` overlay.
@@ -11,7 +34,7 @@ All notable changes to Ribbon are recorded here. The format follows [Keep a Chan
 - `ENFORCE_HTTPS` is deprecated (logs a warning). It now means "refuse password sign-in over plain HTTP from everywhere".
 - If you ran the old production compose, update your reverse-proxy/bookmarks to the new address, and remove any override that published the app port next to Caddy.
 
-### Added
+### Added (HTTPS and proxies)
 
 - `PUBLIC_URL` and `TRUSTED_PROXIES`. `X-Forwarded-Proto`, `-Host` and `-For` are honoured only from trusted peers (default: loopback and private ranges, including Tailscale's `100.64/10`); previously any client could set them.
 - The `Secure` cookie flag, the `__Host-` prefix and HSTS follow the effective scheme. HSTS is six months without `includeSubDomains`; `HSTS=off` disables it. Plain-HTTP LAN sign-in works.
