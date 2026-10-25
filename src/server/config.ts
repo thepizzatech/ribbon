@@ -89,3 +89,44 @@ export function backupKeep(): number {
   const n = Number(process.env.BACKUP_KEEP);
   return Number.isInteger(n) && n >= 1 && n <= 1000 ? n : 14;
 }
+
+export type OidcConfig = {
+  issuer: string;
+  clientId: string;
+  clientSecret: string;
+  scopes: string;
+  autoLinkByEmail: boolean;
+  buttonLabel: string;
+};
+
+/** Single sign-on settings from the environment, or null when OIDC_ISSUER / OIDC_CLIENT_ID are not both set. */
+export function oidcConfig(): OidcConfig | null {
+  const issuer = process.env.OIDC_ISSUER?.trim().replace(/\/+$/, "");
+  const clientId = process.env.OIDC_CLIENT_ID?.trim();
+  if (!issuer || !clientId) return null;
+  const scopes = new Set((process.env.OIDC_SCOPES?.trim() || "openid profile email").split(/[\s,]+/).filter(Boolean));
+  scopes.add("openid");
+  return {
+    issuer,
+    clientId,
+    clientSecret: process.env.OIDC_CLIENT_SECRET?.trim() ?? "",
+    scopes: [...scopes].join(" "),
+    autoLinkByEmail: truthy(process.env.OIDC_AUTO_LINK_BY_EMAIL, false),
+    buttonLabel: (process.env.OIDC_BUTTON_LABEL?.trim() || "Sign in with SSO").slice(0, 40),
+  };
+}
+
+/** Hide the password form. Only takes effect when single sign-on is configured, so it can't lock everyone out by accident. */
+export function passwordLoginDisabled(): boolean {
+  return truthy(process.env.DISABLE_PASSWORD_LOGIN, false) && oidcConfig() !== null;
+}
+
+/** Show the guided tour on every sign-in until it is finished (for testing). */
+export function tourAlways(): boolean {
+  return truthy(process.env.TOUR_ALWAYS, false);
+}
+
+/** The tour is off by default in sample-data development mode; this (or TOUR_ALWAYS) turns it on there. */
+export function tourInDev(): boolean {
+  return truthy(process.env.TOUR_IN_DEV, false);
+}

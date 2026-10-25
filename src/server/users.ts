@@ -143,6 +143,8 @@ export function removeUser(db: Db, id: string, actingUserId: string, actingHouse
     if (owners <= 1) return { ok: false, status: 409, reason: "Keep at least one owner." };
   }
   db.prepare("DELETE FROM user_prefs WHERE user_id = ?").run(id);
+  db.prepare("DELETE FROM oidc_identities WHERE user_id = ?").run(id);
+  db.prepare("DELETE FROM webauthn_credentials WHERE user_id = ?").run(id);
   db.prepare("DELETE FROM users WHERE id = ?").run(id);
   return { ok: true };
 }

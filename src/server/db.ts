@@ -230,6 +230,49 @@ export const MIGRATIONS: Migration[] = [
       );
     `,
   },
+  {
+    id: 7,
+    name: "single sign-on, passkeys",
+    sql: `
+      CREATE TABLE oidc_identities (
+        issuer TEXT NOT NULL,
+        subject TEXT NOT NULL,
+        user_id TEXT NOT NULL,
+        email TEXT,
+        created_at TEXT NOT NULL,
+        PRIMARY KEY (issuer, subject)
+      );
+      CREATE INDEX oidc_identities_user ON oidc_identities (user_id);
+      CREATE TABLE oidc_flows (
+        state_hash TEXT PRIMARY KEY,
+        nonce TEXT NOT NULL,
+        verifier TEXT NOT NULL,
+        redirect_uri TEXT NOT NULL,
+        link_user_id TEXT,
+        created_at INTEGER NOT NULL
+      );
+      CREATE TABLE webauthn_credentials (
+        id TEXT PRIMARY KEY,
+        user_id TEXT NOT NULL,
+        public_key BLOB NOT NULL,
+        counter INTEGER NOT NULL DEFAULT 0,
+        transports TEXT NOT NULL DEFAULT '',
+        name TEXT NOT NULL DEFAULT 'Passkey',
+        device_type TEXT NOT NULL DEFAULT '',
+        backed_up INTEGER NOT NULL DEFAULT 0,
+        created_at TEXT NOT NULL,
+        last_used_at TEXT
+      );
+      CREATE INDEX webauthn_user ON webauthn_credentials (user_id);
+      CREATE TABLE webauthn_challenges (
+        id TEXT PRIMARY KEY,
+        kind TEXT NOT NULL,
+        user_id TEXT,
+        challenge TEXT NOT NULL,
+        created_at INTEGER NOT NULL
+      );
+    `,
+  },
 ];
 
 export function dataDir(): string {

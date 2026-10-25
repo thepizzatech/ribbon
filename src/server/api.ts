@@ -3,7 +3,7 @@
 // backups, ...) plug in through the two handler lists at the bottom of this file.
 import { randomUUID } from "node:crypto";
 import { normalizeRelationship, relationshipLabel, type Person } from "../lib/gifts/model.ts";
-import { seedSampleData, setupCode } from "./config.ts";
+import { passwordLoginDisabled, seedSampleData, setupCode } from "./config.ts";
 import { clearCookies, readSessionToken, sessionCookie } from "./cookies.ts";
 import { getDb, type Db } from "./db.ts";
 import { error, json, readJson, decode, type ApiCall, type Handler, type PublicCall, type PublicHandler } from "./http.ts";
@@ -289,9 +289,6 @@ async function login(store: Db, request: Request): Promise<Response> {
   return startSessionWith(store, row.id, request);
 }
 
-function passwordLoginDisabled(): boolean {
-  return /^(1|true|yes|on)$/i.test(process.env.DISABLE_PASSWORD_LOGIN?.trim() ?? "") && Boolean(process.env.OIDC_ISSUER?.trim());
-}
 
 // ---- account, logins ----
 
