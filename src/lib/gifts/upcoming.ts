@@ -133,3 +133,11 @@ export function daysLabel(daysLeft: number): string {
   if (daysLeft === 1) return "Tomorrow";
   return `In ${daysLeft} days`;
 }
+
+/** "Dec 2" or "Dec 2, 2016" from "YYYY-MM-DD" / "--MM-DD". */
+export function formatMonthDay(value: string): string {
+  const parts = monthDay(value);
+  if (!parts) return value;
+  const date = new Date(parts.year ?? 2000, parts.month - 1, parts.day);
+  return date.toLocaleDateString(undefined, parts.year ? { month: "short", day: "numeric", year: "numeric" } : { month: "short", day: "numeric" });
+}

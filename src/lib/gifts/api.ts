@@ -25,7 +25,7 @@ export const setCsrfToken = (token: string | null | undefined) => {
 };
 export const getCsrfToken = () => csrfToken;
 
-async function request<T>(method: string, path: string, body?: unknown): Promise<T> {
+export async function request<T>(method: string, path: string, body?: unknown): Promise<T> {
   let response: Response;
   const headers: Record<string, string> = {};
   if (body !== undefined) headers["content-type"] = "application/json";
@@ -58,7 +58,19 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
 const enc = encodeURIComponent;
 
 export type Role = "owner" | "member";
-export type AccountUser = { id: string; username: string; displayName: string; role: Role; createdAt?: string };
+export type AccountUser = {
+  id: string;
+  username: string;
+  displayName: string;
+  role: Role;
+  createdAt?: string;
+  householdId?: string;
+  /** The person in the ledger who is this login ("this is me"). */
+  personId?: string | null;
+  email?: string | null;
+};
+export type TourInfo = { state: "done" | "skipped" | null; at: string | null; autoShow: boolean };
+export type SsoInfo = { enabled: boolean; label?: string; passwordDisabled?: boolean; linked?: boolean };
 export type Session = {
   version: string;
   commit: string | null;
@@ -76,6 +88,11 @@ export type Session = {
   authed: boolean;
   user: AccountUser | null;
   csrfToken: string | null;
+  household?: { id: string; name: string } | null;
+  sso?: SsoInfo;
+  passkeys?: number;
+  isAdmin?: boolean;
+  tour?: TourInfo | null;
 };
 export type SetupInput = {
   setupCode?: string;
@@ -111,8 +128,10 @@ export const api = {
   changePassword: (current: string, next: string) =>
     request<{ ok: true }>("POST", "/api/account/password", { current, next }),
   users: () => request<{ users: AccountUser[] }>("GET", "/api/users"),
-  addUser: (input: { username: string; password: string; displayName?: string; role: Role }) =>
+  addUser: (input: { username: string; password?: string; displayName?: string; role: Role; email?: string; personId?: string }) =>
     request<{ user: AccountUser }>("POST", "/api/users", input),
+  updateUser: (id: string, patch: { personId?: string | null; role?: Role; displayName?: string }) =>
+    request<{ user: AccountUser }>("PATCH", `/api/users/${enc(id)}`, patch),
   removeUser: (id: string) => request<{ ok: true }>("DELETE", `/api/users/${enc(id)}`),
   ledger: () => request<Ledger>("GET", "/api/ledger"),
   setHousehold: (patch: { householdName?: string; demo?: boolean; demoDismissed?: boolean }) =>

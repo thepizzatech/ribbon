@@ -19,7 +19,9 @@ import {
   Users,
 } from "lucide-react";
 import { useMemo, useState } from "react";
+import { BudgetsCard } from "@/components/budgets";
 import { MonthChart, Waterfall } from "@/components/charts";
+import { UpcomingCard } from "@/components/upcoming-card";
 import { useOverlay } from "@/components/overlay";
 import { Button } from "@/components/ui";
 import { downloadLedger } from "@/lib/gifts/export";
@@ -115,7 +117,7 @@ export function HomePage() {
           <Download size={15} strokeWidth={1.5} />
           Export
         </Button>
-        <Button pill onClick={() => open({ type: "gift", id: null })}>
+        <Button pill data-tour="add-gift" onClick={() => open({ type: "gift", id: null })}>
           <Plus size={15} strokeWidth={1.75} />
           Log gift
         </Button>
@@ -127,7 +129,7 @@ export function HomePage() {
     return (
       <div>
         {header}
-        <section className="card empty" style={{ maxWidth: 560 }}>
+        <section className="card empty" style={{ maxWidth: 560 }} data-tour="hero">
           <span className="empty-art">
             <GiftIcon size={26} strokeWidth={1.5} />
           </span>
@@ -148,6 +150,9 @@ export function HomePage() {
             </Button>
           </div>
         </section>
+        <div style={{ maxWidth: 560, marginTop: 16 }}>
+          <UpcomingCard />
+        </div>
       </div>
     );
   }
@@ -207,7 +212,7 @@ export function HomePage() {
 
       <div className="dash-grid">
         <div className="dash-col">
-          <section className="card" aria-labelledby="hero-title">
+          <section className="card" aria-labelledby="hero-title" data-tour="hero">
             <h2 className="card-title" id="hero-title">
               Gifts this year
             </h2>
@@ -298,6 +303,7 @@ export function HomePage() {
         </div>
 
         <div className="dash-col">
+          <UpcomingCard />
           <section className="card" aria-labelledby="split-title">
             <div className="card-head">
               <div>
@@ -338,6 +344,7 @@ export function HomePage() {
               <p className="mt-4 text-sm text-muted">Log a gift you gave in {year} and its breakdown appears here.</p>
             )}
           </section>
+          <BudgetsCard year={year} />
         </div>
 
         <div className="dash-col is-wide">

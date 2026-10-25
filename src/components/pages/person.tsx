@@ -1,6 +1,8 @@
 import { Link } from "@tanstack/react-router";
 import { ChevronLeft, Pencil, Plus } from "lucide-react";
+import { PersonBudget } from "@/components/budgets";
 import { Waterfall } from "@/components/charts";
+import { WishlistSection } from "@/components/wishlist";
 import { useOverlay } from "@/components/overlay";
 import { initialsOf } from "@/components/pages/people";
 import { StatusDot } from "@/components/pages/ledger";
@@ -8,12 +10,15 @@ import { Button } from "@/components/ui";
 import { personOccasions } from "@/lib/gifts/insights";
 import { formatDate, formatMoney, giftsForPerson, personName } from "@/lib/gifts/model";
 import { useLedger } from "@/lib/gifts/store";
+import { useMyPersonId } from "@/lib/gifts/use-session";
+import { formatMonthDay } from "@/lib/gifts/upcoming";
 
 export function PersonPage({ personId }: { personId: string }) {
   const people = useLedger((state) => state.people);
   const gifts = useLedger((state) => state.gifts);
   const { open } = useOverlay();
   const person = people.find((item) => item.id === personId);
+  const me = useMyPersonId();
 
   if (!person) {
     return (
@@ -56,7 +61,15 @@ export function PersonPage({ personId }: { personId: string }) {
           <h1 className="page-title">{person.name}</h1>
           <p className="mt-1 text-sm text-muted">
             {person.role || "No relationship set"} · {person.circle === "household" ? "In your household" : "Outside the household"}
+            {me === person.id ? " · This is you" : ""}
           </p>
+          {person.birthday || person.anniversary ? (
+            <p className="mt-1 text-sm text-muted">
+              {person.birthday ? `Birthday ${formatMonthDay(person.birthday)}` : ""}
+              {person.birthday && person.anniversary ? " · " : ""}
+              {person.anniversary ? `Anniversary ${formatMonthDay(person.anniversary)}` : ""}
+            </p>
+          ) : null}
         </div>
         <div className="actions flex gap-2">
           <Button variant="secondary" pill onClick={() => open({ type: "person", id: person.id })}>
@@ -90,6 +103,11 @@ export function PersonPage({ personId }: { personId: string }) {
           <p className="label">Thank-yous owed</p>
           <p className="value">{owed}</p>
         </div>
+      </div>
+
+      <div className="detail-grid" style={{ marginBottom: 16 }}>
+        <WishlistSection personId={person.id} personName={person.name} isSelf={me === person.id} />
+        {me === person.id ? null : <PersonBudget person={person} year={new Date().getFullYear()} />}
       </div>
 
       {history.length === 0 ? (
