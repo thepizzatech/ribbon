@@ -10,7 +10,7 @@ export const Route = createRootRoute({
       { name: "viewport", content: "width=device-width, initial-scale=1, viewport-fit=cover" },
       { title: APP_NAME },
       { name: "description", content: "A private ledger for gifts your household gives and receives." },
-      { name: "theme-color", content: "#f5f6f8" },
+      { name: "theme-color", content: "#f9fafb" },
     ],
     links: [
       { rel: "icon", type: "image/svg+xml", href: "/favicon.svg" },
@@ -26,7 +26,7 @@ export const Route = createRootRoute({
         <script
           dangerouslySetInnerHTML={{
             __html:
-              "try{var t=localStorage.getItem('ribbon-theme');if(t!=='dark'&&t!=='light'){t=matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'}document.documentElement.dataset.theme=t}catch(e){}",
+              "try{var d=document.documentElement,m=matchMedia('(prefers-color-scheme: dark)'),t=localStorage.getItem('ribbon-theme');if(t!=='dark'&&t!=='light'){t=m.matches?'dark':'light'}d.dataset.theme=t;m.addEventListener('change',function(e){if(!localStorage.getItem('ribbon-theme')){d.dataset.theme=e.matches?'dark':'light'}})}catch(e){}",
           }}
         />
       </head>

@@ -1,6 +1,6 @@
 import { ChevronDown } from "lucide-react";
 import { useEffect, useState } from "react";
-import { Button, Field, Sheet, TextArea, TextInput } from "@/components/ui";
+import { Button, Field, Sheet, Switch, TextArea, TextInput } from "@/components/ui";
 import { useOverlay } from "@/components/overlay";
 import { statusLabel, todayISO, type Direction, type Gift, type GiftStatus } from "@/lib/gifts/model";
 import { useLedger } from "@/lib/gifts/store";
@@ -301,14 +301,11 @@ export function GiftSheet() {
             </div>
           </div>
         ) : (
-          <label className="thank-check">
-            <input
-              type="checkbox"
-              checked={draft.thanked}
-              onChange={(event) => setDraft((current) => ({ ...current, thanked: event.target.checked }))}
-            />
-            Thank-you sent
-          </label>
+          <Switch
+            label="Thank-you sent"
+            checked={draft.thanked}
+            onChange={(thanked) => setDraft((current) => ({ ...current, thanked }))}
+          />
         )}
 
         <Field label="Note">

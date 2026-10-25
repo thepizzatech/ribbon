@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { api } from "@/lib/gifts/api";
 import { send } from "@/lib/gifts/sync";
+import { toast } from "@/lib/toast";
 import {
   DEFAULT_OCCASIONS,
   SEED_GIFTS,
@@ -143,12 +144,14 @@ export const useLedger = create<LedgerState>()((set, get) => ({
   addPerson: (person) => {
     set({ people: [...get().people, person] });
     send(() => api.addPerson(person));
+    toast(`${person.name} added`);
   },
   updatePerson: (id, patch) => {
     set({
       people: get().people.map((person) => (person.id === id ? { ...person, ...patch } : person)),
     });
     send(() => api.updatePerson(id, patch));
+    toast("Person saved");
   },
   removePerson: (id) => {
     const { people, gifts } = get();
@@ -158,11 +161,13 @@ export const useLedger = create<LedgerState>()((set, get) => ({
     }
     set({ people: people.filter((person) => person.id !== id) });
     send(() => api.removePerson(id));
+    toast("Person removed");
     return { ok: true };
   },
   addGift: (gift) => {
     set({ gifts: [gift, ...get().gifts] });
     send(() => api.addGift(gift));
+    toast("Gift added");
   },
   updateGift: (id, patch) => {
     // The sheet passes the whole gift; the server only needs the fields (never the id).
@@ -171,10 +176,12 @@ export const useLedger = create<LedgerState>()((set, get) => ({
       gifts: get().gifts.map((gift) => (gift.id === id ? { ...gift, ...fields } : gift)),
     });
     send(() => api.updateGift(id, fields));
+    toast("Gift saved");
   },
   removeGift: (id) => {
     set({ gifts: get().gifts.filter((gift) => gift.id !== id) });
     send(() => api.removeGift(id));
+    toast("Gift deleted");
   },
   clearLedger: () => {
     const next = freshHousehold();

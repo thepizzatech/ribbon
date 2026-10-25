@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils";
 
 type Variant = "primary" | "secondary" | "ghost" | "danger";
 
+
 const variantClass: Record<Variant, string> = {
   primary: "btn-primary",
   secondary: "btn-secondary",
@@ -15,16 +16,42 @@ const variantClass: Record<Variant, string> = {
 export function Button({
   variant = "primary",
   block,
+  pill,
+  small,
   className,
   type = "button",
   ...props
-}: ButtonHTMLAttributes<HTMLButtonElement> & { variant?: Variant; block?: boolean }) {
+}: ButtonHTMLAttributes<HTMLButtonElement> & { variant?: Variant; block?: boolean; pill?: boolean; small?: boolean }) {
   return (
     <button
       type={type}
-      className={cn("btn press", variantClass[variant], block && "btn-block", className)}
+      className={cn("btn press", variantClass[variant], block && "btn-block", pill && "btn-pill", small && "btn-sm", className)}
       {...props}
     />
+  );
+}
+
+export function Switch({
+  checked,
+  onChange,
+  label,
+}: {
+  checked: boolean;
+  onChange: (checked: boolean) => void;
+  label: string;
+}) {
+  return (
+    <div className="switch-row">
+      <span id={`sw-${label}`}>{label}</span>
+      <button
+        type="button"
+        role="switch"
+        aria-checked={checked}
+        aria-labelledby={`sw-${label}`}
+        className="switch"
+        onClick={() => onChange(!checked)}
+      />
+    </div>
   );
 }
 

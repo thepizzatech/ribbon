@@ -4,6 +4,10 @@ import { useEffect, useRef, useState } from "react";
 import { Button, Field, Sheet, TextInput } from "@/components/ui";
 import { useOverlay } from "@/components/overlay";
 import { api } from "@/lib/gifts/api";
+import { downloadLedger } from "@/lib/gifts/export";
+import { setTheme, useTheme } from "@/lib/theme";
+import { toast } from "@/lib/toast";
+import { versionLabel } from "@/lib/version";
 import { parseBackup } from "@/lib/gifts/model";
 import { useLedger } from "@/lib/gifts/store";
 
@@ -25,6 +29,7 @@ export function SettingsSheet() {
   const [message, setMessage] = useState("");
   const [confirmClear, setConfirmClear] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+  const theme = useTheme();
   const session = useQuery({ queryKey: ["session"], queryFn: api.session, refetchOnWindowFocus: false });
 
   useEffect(() => {
@@ -42,29 +47,8 @@ export function SettingsSheet() {
   }
 
   function exportLedger() {
-    const state = useLedger.getState();
-    const blob = new Blob(
-      [
-        JSON.stringify(
-          {
-            version: 1,
-            householdName: state.householdName,
-            people: state.people,
-            gifts: state.gifts,
-            occasions: state.occasions,
-          },
-          null,
-          2,
-        ),
-      ],
-      { type: "application/json" },
-    );
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = "ribbon-ledger.json";
-    link.click();
-    URL.revokeObjectURL(url);
+    downloadLedger(useLedger.getState());
+    toast("Ledger exported");
   }
 
   return (
@@ -82,7 +66,7 @@ export function SettingsSheet() {
           onSubmit={(event) => {
             event.preventDefault();
             setHouseholdName(name);
-            setMessage("Household name saved.");
+            toast("Household name saved");
           }}
         >
           <Field label="Household name">
@@ -92,6 +76,19 @@ export function SettingsSheet() {
             Save name
           </Button>
         </form>
+
+        <section className="flex flex-col gap-2">
+          <p className="lbl">Appearance</p>
+          <div className="segment" role="group" aria-label="Theme">
+            <button type="button" className={theme === "light" ? "is-on" : ""} onClick={() => setTheme("light")}>
+              Light
+            </button>
+            <button type="button" className={theme === "dark" ? "is-on" : ""} onClick={() => setTheme("dark")}>
+              Dark
+            </button>
+          </div>
+          <p className="text-xs text-muted">Follows your device until you pick one.</p>
+        </section>
 
         <section className="flex flex-col gap-2">
           <div>
@@ -254,6 +251,7 @@ export function SettingsSheet() {
           <p className="text-sm text-muted">
             Asking a question sends the gift list to the assistant. Nothing is sent until you ask.
           </p>
+          <p className="border-t border-border pt-3 text-xs text-muted">About · Ribbon {versionLabel()}</p>
         </div>
       </div>
     </Sheet>
