@@ -283,6 +283,82 @@ export const MIGRATIONS: Migration[] = [
       ALTER TABLE households ADD COLUMN setup_step INTEGER NOT NULL DEFAULT 1;
     `,
   },
+  {
+    id: 9,
+    name: "calendars: connections, imported events, manual events",
+    sql: `
+      CREATE TABLE calendar_connections (
+        id TEXT PRIMARY KEY,
+        user_id TEXT NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+        household_id TEXT NOT NULL,
+        kind TEXT NOT NULL CHECK (kind IN ('ics_url', 'ics_file', 'google', 'caldav')),
+        name TEXT NOT NULL,
+        color TEXT NOT NULL DEFAULT 'purple',
+        enabled INTEGER NOT NULL DEFAULT 1,
+        shared INTEGER NOT NULL DEFAULT 0,
+        source_enc TEXT,
+        state TEXT NOT NULL DEFAULT '{}',
+        sync_hours INTEGER,
+        last_synced_at TEXT,
+        last_attempt_at TEXT,
+        last_status TEXT NOT NULL DEFAULT 'pending' CHECK (last_status IN ('pending', 'ok', 'error', 'reauth')),
+        last_error TEXT,
+        failures INTEGER NOT NULL DEFAULT 0,
+        event_count INTEGER NOT NULL DEFAULT 0,
+        created_at TEXT NOT NULL
+      );
+      CREATE INDEX calendar_connections_user ON calendar_connections (user_id);
+      CREATE INDEX calendar_connections_household ON calendar_connections (household_id);
+      CREATE TABLE calendar_events (
+        id TEXT PRIMARY KEY,
+        connection_id TEXT NOT NULL REFERENCES calendar_connections (id) ON DELETE CASCADE,
+        uid TEXT NOT NULL,
+        title TEXT NOT NULL,
+        description TEXT NOT NULL DEFAULT '',
+        location TEXT NOT NULL DEFAULT '',
+        all_day INTEGER NOT NULL DEFAULT 0,
+        starts TEXT NOT NULL,
+        ends TEXT NOT NULL,
+        suggest TEXT CHECK (suggest IN ('birthday', 'anniversary')),
+        suggest_name TEXT,
+        suggest_date TEXT
+      );
+      CREATE INDEX calendar_events_connection ON calendar_events (connection_id);
+      CREATE INDEX calendar_events_starts ON calendar_events (starts);
+      CREATE TABLE calendar_reviews (
+        connection_id TEXT NOT NULL REFERENCES calendar_connections (id) ON DELETE CASCADE,
+        uid TEXT NOT NULL,
+        state TEXT NOT NULL CHECK (state IN ('matched', 'created', 'ignored')),
+        person_id TEXT,
+        created_at TEXT NOT NULL,
+        PRIMARY KEY (connection_id, uid)
+      );
+      CREATE TABLE manual_events (
+        id TEXT PRIMARY KEY,
+        household_id TEXT NOT NULL,
+        user_id TEXT NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+        title TEXT NOT NULL,
+        notes TEXT NOT NULL DEFAULT '',
+        all_day INTEGER NOT NULL DEFAULT 1,
+        date TEXT NOT NULL,
+        start_time TEXT,
+        end_time TEXT,
+        person_id TEXT,
+        yearly INTEGER NOT NULL DEFAULT 0,
+        shared INTEGER NOT NULL DEFAULT 0,
+        created_at TEXT NOT NULL
+      );
+      CREATE INDEX manual_events_household ON manual_events (household_id);
+      CREATE TABLE calendar_oauth_flows (
+        state_hash TEXT PRIMARY KEY,
+        user_id TEXT NOT NULL,
+        verifier TEXT NOT NULL,
+        contacts INTEGER NOT NULL DEFAULT 0,
+        redirect_uri TEXT NOT NULL,
+        created_at INTEGER NOT NULL
+      );
+    `,
+  },
 ];
 
 export function dataDir(): string {
