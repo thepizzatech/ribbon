@@ -354,6 +354,7 @@ export const MIGRATIONS: Migration[] = [
         user_id TEXT NOT NULL,
         verifier TEXT NOT NULL,
         contacts INTEGER NOT NULL DEFAULT 0,
+        settings TEXT NOT NULL DEFAULT '{}',
         redirect_uri TEXT NOT NULL,
         created_at INTEGER NOT NULL
       );

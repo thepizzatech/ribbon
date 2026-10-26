@@ -15,8 +15,9 @@ import { budgetsHandler } from "./budgets.ts";
 import { calendarHandler, calendarPublicHandler } from "./calendar.ts";
 import { calendarEventsHandler } from "./calendar-events.ts";
 import { calendarConnectionsHandler } from "./calendar-connections.ts";
+import { googlePublicHandler } from "./google.ts";
 
-export const extraPublicHandlers: PublicHandler[] = [calendarPublicHandler, oidcPublicHandler, passkeyPublicHandler];
+export const extraPublicHandlers: PublicHandler[] = [calendarPublicHandler, googlePublicHandler, oidcPublicHandler, passkeyPublicHandler];
 export const extraHandlers: Handler[] = [wishlistHandler, budgetsHandler, calendarHandler, calendarEventsHandler, calendarConnectionsHandler, backupsHandler, csvHandler, householdsHandler, sharingHandler, exchangeHandler, oidcHandler, passkeyHandler, tourHandler];
 
 /** Extra fields feature modules add to GET /api/session. */
