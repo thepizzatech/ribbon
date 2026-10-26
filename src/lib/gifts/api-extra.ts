@@ -2,6 +2,8 @@
 import { getCsrfToken, request } from "@/lib/gifts/api";
 import type { Gift, Ledger } from "@/lib/gifts/model";
 
+import type { CalEvent, CalendarsList, CalSummary, Connection, DavCalendar, ManualEvent, ManualInput, ReviewItem } from "@/lib/calendar/types";
+
 const enc = encodeURIComponent;
 
 export type WishStatus = "wanted" | "reserved" | "purchased";
@@ -88,6 +90,27 @@ export const xapi = {
   newCalendarToken: () => request<CalendarInfo>("POST", "/api/calendar/token", {}),
   removeCalendarToken: () => request<CalendarInfo>("DELETE", "/api/calendar/token"),
   setRemindDays: (remindDays: number) => request<CalendarInfo>("PATCH", "/api/calendar", { remindDays }),
+
+  calEvents: (from: string, to: string, today: string) => request<{ events: CalEvent[] }>("GET", `/api/calendar/events?from=${from}&to=${to}&today=${today}`),
+  calSummary: (today: string) => request<CalSummary>("GET", `/api/calendar/summary?today=${today}`),
+  addManualEvent: (input: ManualInput) => request<{ event: ManualEvent }>("POST", "/api/calendar/manual", input),
+  updateManualEvent: (id: string, patch: Partial<ManualInput>) => request<{ event: ManualEvent }>("PATCH", `/api/calendar/manual/${enc(id)}`, patch),
+  deleteManualEvent: (id: string) => request("DELETE", `/api/calendar/manual/${enc(id)}`),
+
+  calendars: () => request<CalendarsList>("GET", "/api/calendars"),
+  addCalendarUrl: (input: { url: string; name?: string; color?: string; shared?: boolean }) =>
+    request<{ connection: Connection } & CalendarsList>("POST", "/api/calendars", { kind: "ics_url", ...input }),
+  uploadCalendar: (input: { text: string; name?: string; color?: string; shared?: boolean }) => request<{ connection: Connection } & CalendarsList>("POST", "/api/calendars/upload", input),
+  discoverCaldav: (input: { url: string; username: string; password: string }) => request<{ calendars: DavCalendar[]; server: string }>("POST", "/api/calendars/caldav/discover", input),
+  addCaldav: (input: { url: string; username: string; password: string; calendars: string[]; name?: string; color?: string; shared?: boolean }) =>
+    request<{ connection: Connection }>("POST", "/api/calendars", { kind: "caldav", ...input }),
+  googleStart: (input: { name?: string; color?: string; shared?: boolean; contacts?: boolean }) => request<{ url: string }>("POST", "/api/calendars/google/start", input),
+  updateCalendar: (id: string, patch: Partial<Pick<Connection, "name" | "color" | "enabled" | "shared" | "syncHours">>) => request<{ connection: Connection }>("PATCH", `/api/calendars/${enc(id)}`, patch),
+  removeCalendar: (id: string) => request("DELETE", `/api/calendars/${enc(id)}`),
+  syncCalendar: (id: string) => request<{ ok: boolean; error: string | null; connection: Connection }>("POST", `/api/calendars/${enc(id)}/sync`, {}),
+  reviews: () => request<{ items: ReviewItem[]; people: { id: string; name: string }[] }>("GET", "/api/calendars/review"),
+  decideReview: (input: { connectionId: string; uid: string; action: "match" | "create" | "ignore"; personId?: string; name?: string; date?: string; relationship?: string; overwrite?: boolean }) =>
+    request<{ ok: true }>("POST", "/api/calendars/review", input),
 
   backups: () => request<{ backups: BackupFile[]; schedule: BackupSchedule }>("GET", "/api/backups"),
   makeBackup: () => request<{ backup: BackupFile; backups: BackupFile[] }>("POST", "/api/backups", {}),

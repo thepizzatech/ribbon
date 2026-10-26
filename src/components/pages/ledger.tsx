@@ -174,7 +174,7 @@ export function LedgerPage() {
                   {head("amount", "Amount", "c-amount")}
                 </tr>
               </thead>
-              <tbody>
+              <tbody className="stagger">
                 {rows.map((gift) => (
                   <tr key={gift.id} onClick={() => open({ type: "gift", id: gift.id })}>
                     <td className="c-gift">

@@ -3,6 +3,7 @@
 // backups, ...) plug in through the two handler lists at the bottom of this file.
 import { randomUUID } from "node:crypto";
 import type { Person } from "../lib/gifts/model.ts";
+import { seedSampleCalendars } from "./calendar-sample.ts";
 import { passwordLoginDisabled, seedSampleData, setupCode } from "./config.ts";
 import { createHash, timingSafeEqual } from "node:crypto";
 import { clearCookies, readSessionToken, sessionCookie } from "./cookies.ts";
@@ -215,6 +216,7 @@ async function setup(store: Db, request: Request, secure: boolean): Promise<Resp
   if (existingHid) {
     // An upgrade from before accounts: the household already exists, only the owner login is missing.
     const owner = createUser(store, { username, displayName: yourName || username, role: "owner", passwordHash, householdId: existingHid });
+    if (seedSampleData()) seedSampleCalendars(store, owner); // the sample household comes with sample calendar events
     return startSessionWith(store, owner.id, request, 201);
   }
   const selfId = randomUUID();

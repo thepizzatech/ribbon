@@ -22,6 +22,7 @@ import { useMemo, useState } from "react";
 import { BudgetsCard } from "@/components/budgets";
 import { MonthChart, Waterfall } from "@/components/charts";
 import { UpcomingCard } from "@/components/upcoming-card";
+import { CountUp } from "@/components/motion";
 import { useOverlay } from "@/components/overlay";
 import { Button } from "@/components/ui";
 import { downloadLedger } from "@/lib/gifts/export";
@@ -211,7 +212,7 @@ export function HomePage() {
       ) : null}
 
       <div className="dash-grid">
-        <div className="dash-col">
+        <div className="dash-col stagger">
           <section className="card" aria-labelledby="hero-title" data-tour="hero">
             <h2 className="card-title" id="hero-title">
               Gifts this year
@@ -219,7 +220,9 @@ export function HomePage() {
             <p className="card-sub">
               {year} · received and given
             </p>
-            <p className="hero-num mt-6">{totals.total}</p>
+            <p className="hero-num mt-6">
+              <CountUp value={totals.total} />
+            </p>
             <div className="hero-row">
               <DeltaPill value={delta(totals.total, last.total)} />
               <span className="text-xs text-muted">
@@ -248,14 +251,18 @@ export function HomePage() {
               <div className="stat-row">
                 Received
                 <span className="end">
-                  <b>{totals.received}</b>
+                  <b>
+                    <CountUp value={totals.received} />
+                  </b>
                   <DeltaPill value={delta(totals.received, last.received)} />
                 </span>
               </div>
               <div className="stat-row">
                 Given
                 <span className="end">
-                  <b>{totals.given}</b>
+                  <b>
+                    <CountUp value={totals.given} />
+                  </b>
                   <DeltaPill value={delta(totals.given, last.given)} />
                 </span>
               </div>
@@ -302,7 +309,7 @@ export function HomePage() {
           </section>
         </div>
 
-        <div className="dash-col">
+        <div className="dash-col stagger">
           <UpcomingCard />
           <section className="card" aria-labelledby="split-title">
             <div className="card-head">
@@ -347,7 +354,7 @@ export function HomePage() {
           <BudgetsCard year={year} />
         </div>
 
-        <div className="dash-col is-wide">
+        <div className="dash-col is-wide stagger">
           {insight ? (
             <section className="insight" aria-label="Insight">
               <span className="insight-mesh" aria-hidden="true" />
@@ -407,7 +414,7 @@ export function HomePage() {
                 <Check size={16} strokeWidth={1.75} /> Every received gift has a thank-you and nothing is waiting to be given.
               </p>
             ) : (
-              <ul className="need-list">
+              <ul className="need-list stagger">
                 {needItems.map((item) => {
                   const Icon = item.icon;
                   return (

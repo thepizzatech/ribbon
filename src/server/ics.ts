@@ -148,7 +148,7 @@ export function parseIcs(text: string, now = new Date()): ParseOutcome {
       const title = cleanText(ev.summary ?? instance.summary, 200) || "(No title)";
       let starts: string;
       let ends: string;
-      let allDay = instance.isFullDay === true;
+      const allDay = instance.isFullDay === true;
       const start = instance.start;
       if (!(start instanceof Date) || Number.isNaN(start.getTime())) continue;
       const end = instance.end instanceof Date && !Number.isNaN(instance.end.getTime()) ? instance.end : start;

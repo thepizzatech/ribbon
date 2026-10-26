@@ -54,7 +54,7 @@ function Section({
       {people.length === 0 ? (
         <p className="text-sm text-muted">No one here yet.</p>
       ) : (
-        <ul className="people-grid m-0 list-none p-0">
+        <ul className="people-grid stagger m-0 list-none p-0">
           {people.map((person) => {
             const counts = personCounts(gifts, person.id);
             return (

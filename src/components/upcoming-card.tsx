@@ -76,7 +76,7 @@ export function UpcomingCard() {
           Nothing in the next 60 days. Add birthdays on a person and a date for each occasion in Settings.
         </p>
       ) : (
-        <ul className="need-list">
+        <ul className="need-list stagger">
           {events.slice(0, 6).map((event) => (
             <li className="need" key={event.key}>
               <Row event={event} />

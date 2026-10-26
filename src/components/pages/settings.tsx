@@ -2,6 +2,7 @@ import { Link, useNavigate } from "@tanstack/react-router";
 import { AccountSection } from "@/components/account";
 import { InsecureNotice } from "@/components/auth";
 import { AccountExtras } from "@/components/settings/account-tab";
+import { CalendarsTab } from "@/components/settings/calendars";
 import { DataTab } from "@/components/settings/data";
 import { GeneralTab } from "@/components/settings/general";
 import { HelpTab } from "@/components/settings/help";
@@ -12,6 +13,7 @@ import { cn } from "@/lib/utils";
 export const SETTINGS_TABS = [
   { id: "general", label: "General" },
   { id: "account", label: "Account" },
+  { id: "calendars", label: "Calendars" },
   { id: "data", label: "Data" },
   { id: "sharing", label: "Sharing" },
   { id: "help", label: "Help" },
@@ -72,6 +74,7 @@ export function SettingsPage({ tab }: { tab: SettingsTab }) {
             <AccountExtras />
           </div>
         ) : null}
+        {tab === "calendars" ? <CalendarsTab /> : null}
         {tab === "data" ? <DataTab /> : null}
         {tab === "sharing" ? <SharingTab /> : null}
         {tab === "help" ? <HelpTab /> : null}

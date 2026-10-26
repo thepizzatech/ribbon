@@ -3,6 +3,7 @@ import { Link, Outlet, useNavigate, useRouterState } from "@tanstack/react-route
 import {
   Bell,
   BookOpen,
+  CalendarDays,
   CircleHelp,
   Gift,
   House,
@@ -23,6 +24,8 @@ import { GiftSheet } from "@/components/gift-sheet";
 import { PersonSheet } from "@/components/person-sheet";
 import { Toaster } from "@/components/toaster";
 import { api } from "@/lib/gifts/api";
+import { xapi } from "@/lib/gifts/api-extra";
+import { todayLocal } from "@/lib/gifts/upcoming";
 import { needsYou } from "@/lib/gifts/insights";
 import { useLedger } from "@/lib/gifts/store";
 import { setTheme, useTheme } from "@/lib/theme";
@@ -31,10 +34,11 @@ import { startTour } from "@/lib/tour";
 import { versionLabel } from "@/lib/version";
 import { cn } from "@/lib/utils";
 
-type NavItem = { to: "/" | "/ledger" | "/people" | "/ask" | "/shared" | "/santa"; label: string; icon: LucideIcon; exact: boolean };
+type NavItem = { to: "/" | "/calendar" | "/ledger" | "/people" | "/ask" | "/shared" | "/santa"; label: string; icon: LucideIcon; exact: boolean };
 
 const NAV: readonly NavItem[] = [
   { to: "/", label: "Overview", icon: House, exact: true },
+  { to: "/calendar", label: "Calendar", icon: CalendarDays, exact: false },
   { to: "/ledger", label: "Ledger", icon: BookOpen, exact: false },
   { to: "/people", label: "People", icon: Users, exact: false },
   { to: "/ask", label: "Ask", icon: MessageCircle, exact: false },
@@ -66,6 +70,21 @@ function Wordmark() {
   );
 }
 
+/** Little dots beside Calendar: one per kind of event happening today. They fade in with the calendar's events. */
+function TodayDots() {
+  const today = todayLocal();
+  const summary = useQuery({ queryKey: ["calendar", "summary", today], queryFn: () => xapi.calSummary(today), refetchOnWindowFocus: false, retry: false });
+  const tones = summary.data?.todayTones ?? [];
+  if (tones.length === 0) return null;
+  return (
+    <span className="nav-dots" role="img" aria-label={`${summary.data?.todayCount ?? tones.length} on today`}>
+      {tones.map((tone, i) => (
+        <i key={tone} className={`tone-${tone} rise`} style={{ animationDelay: `${300 + i * 120}ms` }} />
+      ))}
+    </span>
+  );
+}
+
 function NavLinks({ variant, items }: { variant: "dock" | "side"; items: readonly NavItem[] }) {
   const pathname = useRouterState({ select: (state) => state.location.pathname });
   const setListFocus = useLedger((state) => state.setListFocus);
@@ -88,6 +107,7 @@ function NavLinks({ variant, items }: { variant: "dock" | "side"; items: readonl
           >
             <Icon size={variant === "dock" ? 20 : 18} strokeWidth={1.5} />
             {item.label}
+            {item.to === "/calendar" ? <TodayDots /> : null}
           </Link>
         );
       })}
@@ -173,9 +193,9 @@ function Sidebar() {
       </div>
       <SideSearch />
       <nav className="mt-3 flex flex-col gap-1" aria-label="Primary">
-        <NavLinks variant="side" items={NAV.slice(0, 2)} />
+        <NavLinks variant="side" items={NAV.slice(0, 3)} />
         <p className="nav-kicker">Explore</p>
-        <NavLinks variant="side" items={[...NAV.slice(2), ...MORE]} />
+        <NavLinks variant="side" items={[...NAV.slice(3), ...MORE]} />
       </nav>
       <div className="mt-auto flex flex-col gap-1">
         <button

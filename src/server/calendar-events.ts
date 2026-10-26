@@ -7,7 +7,7 @@
 //    (a shared manual event about the viewer is hidden from the viewer unless they wrote it)
 import { randomUUID } from "node:crypto";
 import { addDays, daysBetween, monthDay, upcoming, type Upcoming } from "../lib/gifts/upcoming.ts";
-import { decode, error, json, type ApiCall, type Handler } from "./http.ts";
+import { decode, error, json, type Handler } from "./http.ts";
 import { getLedger } from "./ledger.ts";
 import { listExchanges } from "./secretsanta.ts";
 import { cleanText } from "./ics.ts";

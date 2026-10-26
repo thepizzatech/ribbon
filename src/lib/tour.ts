@@ -6,6 +6,7 @@ export type TourStep = { target: string; title: string; body: string; side?: "to
 export const TOUR_STEPS: readonly TourStep[] = [
   { target: "hero", title: "Welcome", body: "Hi! This is your gifting dashboard. Everything at a glance.", side: "bottom" },
   { target: "add-gift", title: "Add a gift", body: "Got a gift idea or a purchase? Tap here. Takes 10 seconds.", side: "bottom" },
+  { target: "nav-calendar", title: "Calendar", body: "Birthdays, gift deadlines and your own events in one week view. Connect Google, Apple or any calendar in Settings.", side: "right" },
   { target: "nav-ledger", title: "The ledger", body: "Every gift you’ve given or received, with totals and filters.", side: "right" },
   { target: "nav-people", title: "People", body: "One page per person: wishlist, budget, past gifts.", side: "right" },
   { target: "nav-ask", title: "Ask Ribbon", body: "Ask Ribbon in plain English, like “what did I spend on Mom?”", side: "right" },

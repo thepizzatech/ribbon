@@ -72,6 +72,7 @@ describe("ICS parsing", () => {
 
   it("strips control and bidi characters, keeps text as text (no HTML interpretation), and bounds length", () => {
     const evil = "<img src=x onerror=alert(1)>\u0000\u0007\u202eevil\u202c" + "x".repeat(500);
+    // eslint-disable-next-line no-control-regex -- the point of the test is that these characters are gone
     assert.ok(!/[\u0000\u0007\u202e\u202c]/.test(cleanText(evil, 100)));
     assert.equal(cleanText(evil, 100).length, 100);
     assert.equal(cleanText(undefined, 10), "");

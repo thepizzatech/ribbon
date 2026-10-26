@@ -378,6 +378,19 @@ describe("onboarding", () => {
     assert.equal((await call(db, "POST", "/api/setup", { ...family, setupCode: "let-me-in" })).status, 201);
   });
 
+  test("setting up on top of the sample household brings sample calendar events; a real install gets none", async () => {
+    process.env.SEED_SAMPLE_DATA = "true";
+    const demo = freshDb({ seed: true });
+    const made = await call(demo, "POST", "/api/setup", { username: "sam", password: "a-long-enough-password-1", yourName: "Sam" });
+    assert.equal(made.status, 201, JSON.stringify(made.body));
+    const n = (db: ReturnType<typeof freshDb>) => (db.prepare("SELECT COUNT(*) AS n FROM calendar_events").get() as { n: number }).n;
+    assert.ok(n(demo) > 8);
+    process.env.SEED_SAMPLE_DATA = "false";
+    const real = freshDb();
+    assert.equal((await call(real, "POST", "/api/setup", { username: "sam", password: "a-long-enough-password-1", yourName: "Sam", familyName: "The Sams" })).status, 201);
+    assert.equal(n(real), 0);
+  });
+
   test("the dev account is only created with sample data on and never in production", () => {
     process.env.SEED_SAMPLE_DATA = "true";
     process.env.NODE_ENV = "test";

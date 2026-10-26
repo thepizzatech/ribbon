@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as AppRouteRouteImport } from './routes/_app/route'
 import { Route as AppIndexRouteImport } from './routes/_app/index'
 import { Route as AppAskRouteImport } from './routes/_app/ask'
+import { Route as AppCalendarRouteImport } from './routes/_app/calendar'
 import { Route as AppLedgerRouteImport } from './routes/_app/ledger'
 import { Route as AppSantaRouteImport } from './routes/_app/santa'
 import { Route as AppSettingsRouteImport } from './routes/_app/settings'
@@ -32,6 +33,11 @@ const AppIndexRoute = AppIndexRouteImport.update({
 const AppAskRoute = AppAskRouteImport.update({
   id: '/ask',
   path: '/ask',
+  getParentRoute: () => AppRouteRoute,
+} as any)
+const AppCalendarRoute = AppCalendarRouteImport.update({
+  id: '/calendar',
+  path: '/calendar',
   getParentRoute: () => AppRouteRoute,
 } as any)
 const AppLedgerRoute = AppLedgerRouteImport.update({
@@ -73,6 +79,7 @@ const AppPeoplePersonIdRoute = AppPeoplePersonIdRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof AppIndexRoute
   '/ask': typeof AppAskRoute
+  '/calendar': typeof AppCalendarRoute
   '/ledger': typeof AppLedgerRoute
   '/santa': typeof AppSantaRoute
   '/settings': typeof AppSettingsRoute
@@ -83,6 +90,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/ask': typeof AppAskRoute
+  '/calendar': typeof AppCalendarRoute
   '/ledger': typeof AppLedgerRoute
   '/santa': typeof AppSantaRoute
   '/settings': typeof AppSettingsRoute
@@ -96,6 +104,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_app': typeof AppRouteRouteWithChildren
   '/_app/ask': typeof AppAskRoute
+  '/_app/calendar': typeof AppCalendarRoute
   '/_app/ledger': typeof AppLedgerRoute
   '/_app/santa': typeof AppSantaRoute
   '/_app/settings': typeof AppSettingsRoute
@@ -110,6 +119,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/ask'
+    | '/calendar'
     | '/ledger'
     | '/santa'
     | '/settings'
@@ -120,6 +130,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/ask'
+    | '/calendar'
     | '/ledger'
     | '/santa'
     | '/settings'
@@ -132,6 +143,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/_app'
     | '/_app/ask'
+    | '/_app/calendar'
     | '/_app/ledger'
     | '/_app/santa'
     | '/_app/settings'
@@ -168,6 +180,13 @@ declare module '@tanstack/react-router' {
       path: '/ask'
       fullPath: '/ask'
       preLoaderRoute: typeof AppAskRouteImport
+      parentRoute: typeof AppRouteRoute
+    }
+    '/_app/calendar': {
+      id: '/_app/calendar'
+      path: '/calendar'
+      fullPath: '/calendar'
+      preLoaderRoute: typeof AppCalendarRouteImport
       parentRoute: typeof AppRouteRoute
     }
     '/_app/ledger': {
@@ -224,6 +243,7 @@ declare module '@tanstack/react-router' {
 
 interface AppRouteRouteChildren {
   AppAskRoute: typeof AppAskRoute
+  AppCalendarRoute: typeof AppCalendarRoute
   AppLedgerRoute: typeof AppLedgerRoute
   AppSantaRoute: typeof AppSantaRoute
   AppSettingsRoute: typeof AppSettingsRoute
@@ -235,6 +255,7 @@ interface AppRouteRouteChildren {
 
 const AppRouteRouteChildren: AppRouteRouteChildren = {
   AppAskRoute: AppAskRoute,
+  AppCalendarRoute: AppCalendarRoute,
   AppLedgerRoute: AppLedgerRoute,
   AppSantaRoute: AppSantaRoute,
   AppSettingsRoute: AppSettingsRoute,
