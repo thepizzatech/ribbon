@@ -136,3 +136,39 @@ export function tourAlways(): boolean {
 export function tourInDev(): boolean {
   return truthy(process.env.TOUR_IN_DEV, false);
 }
+
+// ---- calendars ----
+
+/** Optional secret that protects calendar credentials (CalDAV passwords, Google tokens) at rest. Unset: one is generated in DATA_DIR. */
+export function appSecret(): string | undefined {
+  return process.env.APP_SECRET?.trim() || undefined;
+}
+
+/** Lets calendar URLs point at private, loopback and link-local addresses (a homelab calendar server). Default off. */
+export function allowPrivateCalendarUrls(): boolean {
+  return truthy(process.env.ALLOW_PRIVATE_CALENDAR_URLS, false);
+}
+
+/** Google Calendar sign-in is offered only when both are set. */
+export function googleConfig(): { clientId: string; clientSecret: string } | null {
+  const clientId = process.env.GOOGLE_CLIENT_ID?.trim();
+  const clientSecret = process.env.GOOGLE_CLIENT_SECRET?.trim();
+  return clientId && clientSecret ? { clientId, clientSecret } : null;
+}
+
+/** Hours between automatic refreshes of a calendar connection (default 6; 1 to 168). A connection can override it. */
+export function calendarSyncHours(): number {
+  const n = Number(process.env.CALENDAR_SYNC_HOURS);
+  return Number.isInteger(n) && n >= 1 && n <= 168 ? n : 6;
+}
+
+/** How many calendar connections one login may have (default 10). */
+export function calendarMaxConnections(): number {
+  const n = Number(process.env.CALENDAR_MAX_CONNECTIONS);
+  return Number.isInteger(n) && n >= 1 && n <= 100 ? n : 10;
+}
+
+/** Set CALENDAR_SYNC=off to stop the background refresh (manual Sync now still works). */
+export function calendarSyncEnabled(): boolean {
+  return truthy(process.env.CALENDAR_SYNC, true);
+}
