@@ -4,12 +4,30 @@ All notable changes to Ribbon are recorded here. The format follows [Keep a Chan
 
 ## [Unreleased]
 
+Development build `0.4.0-dev.1`: the Calendar.
+
 ### Added
+
+- **Calendar page.** Day, Week and Month views of birthdays, anniversaries, yearly occasions, gift deadlines, Secret Santa dates, your own events and imported events. Filter chips per person and per source, three KPI tiles (events this week, birthdays in 30 days, gifts still needed), an event detail sheet with **Add gift idea** or **Go to person**, manual events (all day or timed, optional person, yearly repeat, private or shared), a "Coming up" panel and a Calendar item in the sidebar and phone tab bar.
+- **Settings → Calendars.** Connect external calendars, read-only and private to the person who adds them unless they share a connection:
+    - an **ICS link** (Google secret address, iCloud public calendar, Outlook published calendar, `webcal://`), refreshed every 6 hours with ETag and `If-None-Match`, repeating events (`RRULE`, exceptions, cancellations) expanded;
+    - an **.ics file** upload;
+    - **Sign in with Google** (OAuth 2.0 with PKCE and state, read-only, optional contact birthdays, encrypted tokens, refresh, revoke on disconnect), only when `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` are set;
+    - **CalDAV** (experimental, read-only, for iCloud with an app-specific password, Fastmail, Nextcloud, Radicale and others);
+    - per-connection name, colour, show/hide, share with household, refresh interval, **Sync now** and error messages;
+    - a **birthday review**: events that look like birthdays or anniversaries are offered to match an existing person, add a new one, or ignore. Nothing is created automatically.
+- **Calendar security.** A new SSRF-safe fetcher used for every calendar address (checks after DNS resolution and connects to the checked address, re-checks every redirect, blocks private, loopback, link-local, metadata and special ranges, 5 MB and 10 s limits, credentials only over https and only to the entered host), AES-256-GCM encryption of saved logins (`APP_SECRET` or a generated `DATA_DIR/app-secret`), rate limits, and a calendar section in the [security audit](docs/SECURITY-AUDIT.md).
+- **Load animation across the app.** No skeleton blocks: numbers count up over about 0.8 s, events and cards fade in and rise a few pixels with a staggered delay, panels cascade, sidebar dots fade in. Off with `prefers-reduced-motion`.
+- **Guided tour** has a Calendar step (eight steps).
+- New settings: `APP_SECRET`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `ALLOW_PRIVATE_CALENDAR_URLS`, `CALENDAR_SYNC_HOURS`, `CALENDAR_MAX_CONNECTIONS`, `CALENDAR_SYNC`. Sample-data mode includes sample calendar events; real installs start with no calendars.
+- Docs: **Connecting calendars** guide (Google, iCloud, Outlook, CalDAV, creating a Google OAuth client), a Calendar section in Features, calendar notes in Configuration and Securing your install.
 
 - **Documentation site** at <https://ribbon.thepizza.tech> (MkDocs Material, built from `docs/` and published to GitHub Pages by the new Docs workflow): getting started, a full configuration reference, a guide to securing your install, features, backups and restore, upgrading, troubleshooting and contributing. The existing docs pages are part of it.
 
 ### Changed
 
+- **Look.** A lighter page background and hairline borders, and a shared pastel palette for people and calendars.
+- The outbound reminder feed (Settings → Account) is unchanged and never includes imported calendar events.
 - The README is rewritten with screenshots (light and dark, desktop and phone), a quick start for the `dev` image tag and a short configuration table; the detail now lives on the docs site.
 
 ## [0.3.0-dev.2] - 2026-10-25

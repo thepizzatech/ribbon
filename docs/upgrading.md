@@ -11,7 +11,7 @@ docker compose up -d
 Your data volume is kept and **migrated in place** the first time the new version starts. Check the version afterwards in **Settings → About**, in the sidebar footer, or at `/api/health`:
 
 ```json
-{ "ok": true, "version": "0.3.0-dev.2", "commit": "a5c662f" }
+{ "ok": true, "version": "0.4.0-dev.1", "commit": "a5c662f" }
 ```
 
 ## Before you upgrade
@@ -40,6 +40,13 @@ Until the first release is cut, `RIBBON_TAG=latest` (the compose default) has no
 ### Coming from a version before accounts
 
 Older builds had a single shared passcode (`APP_PASSCODE`) and no sign-in. After updating, the first visit asks you to create the owner login. Nothing is wiped, and no Welcome setup is asked for, because your ledger already exists (installs that already have data count as set up). `APP_PASSCODE` no longer does anything and can be removed from `.env`.
+
+### Moving to 0.4.0-dev.1
+
+- **New: Calendar page and Settings → Calendars.** Nothing changes for existing data. A migration adds the calendar tables; real installs start with no calendars.
+- Optional new settings: `APP_SECRET`, `GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET`, `CALENDAR_SYNC_HOURS`, `CALENDAR_MAX_CONNECTIONS`, `CALENDAR_SYNC`, `ALLOW_PRIVATE_CALENDAR_URLS` (all in [Configuration](configuration.md#calendars)). If you use your own compose file, add the ones you want to its `environment:` list.
+- If you connect calendars, note that Ribbon creates `app-secret` in the data volume to encrypt their logins. Backups do not contain it: set `APP_SECRET` if you plan to restore onto a different machine ([details](calendars.md#backups-and-moving-to-another-server)).
+- The guided tour has a new Calendar step (eight steps now).
 
 ### Moving to 0.3.0-dev.2
 

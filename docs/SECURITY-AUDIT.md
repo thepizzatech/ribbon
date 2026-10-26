@@ -1,6 +1,6 @@
-# Security audit: 0.3.0-dev.2
+# Security audit: 0.4.0-dev.1
 
-A review of the whole app (server and client) done against a **running production build**, not just by reading code. Every finding below was either reproduced with a proof-of-concept request against a local server (before the fix) or checked with one (after the fix); each fix has a regression test in `src/server/*.test.ts` (most in `hardening.test.ts`). Scope: the `main` branch at 0.3.0-dev.1, plus the Welcome setup added in 0.3.0-dev.2.
+A review of the whole app (server and client) done against a **running production build**, not just by reading code. Every finding below was either reproduced with a proof-of-concept request against a local server (before the fix) or checked with one (after the fix); each fix has a regression test in `src/server/*.test.ts` (most in `hardening.test.ts`). Scope: the `main` branch at 0.3.0-dev.1, plus the Welcome setup added in 0.3.0-dev.2. **0.4.0-dev.1 adds calendar connections, which got their own focused review: see [Calendar connections](#calendar-connections).** The numbered findings below are from the earlier full review.
 
 **Result:** no way to read or change another household's data, no SQL injection, no stored XSS, and no sign-in bypass were found. One availability bug (a hanging request), several brute-force and takeover weaknesses, and a number of smaller hardening gaps were found and fixed. Items that remain are listed as accepted, with the reason.
 
@@ -75,6 +75,38 @@ Severity is the impact if exploited on a typical home-hosted install. "Verified"
 | A7 | Info | **A few existence oracles remain** (for example "that login is gone" for ids in your own household). | They only reveal what a signed-in member of that household can already see. |
 | A8 | Info | **A LAN IP address appears in old test fixtures in git history.** | Private address, no secret. |
 | A9 | Info | **The base image is pinned by tag, not digest,** and the container's root filesystem is writable. | Dependabot tracks the tag; `read_only: true` with a tmpfs for `/tmp` is a good extra step but was not tested here. |
+
+## Calendar connections
+
+Calendars make the server fetch addresses that users type in and store third-party credentials, so they were reviewed as their own surface: a mini-review of the code, then probes against the **built production server** (`ALLOW_PRIVATE_CALENDAR_URLS` off) as a signed-in owner and as an anonymous client. Calendar logic has about 100 tests; the ones that matter here are named below.
+
+### What was probed
+
+- **Server-side request forgery.** 19 calendar addresses were submitted to `POST /api/calendars` and `/api/calendars/caldav/discover`: `127.0.0.1`, `localhost`, `[::1]`, `169.254.169.254`, `2130706433` (decimal), `0x7f.1`, `127.1`, `[::ffff:127.0.0.1]`, `[::ffff:7f00:1]`, `10.0.0.1`, `192.168.1.1`, `100.64.0.1`, `0.0.0.0`, `metadata.google.internal`, names that resolve to loopback (`localtest.me`, `127.0.0.1.nip.io`), `file://`, `ftp://` and `user:pw@host`. Every one was refused with a plain message and **nothing was fetched or stored**. A CalDAV password to `http://` is refused outright.
+- **Fetch limits (tests).** The address is checked after DNS resolution and the socket connects to that checked address, so a hostname cannot change its answer between check and connect. Redirects are followed manually, at most 5, each hop re-checked, and non-http schemes stop the chain. The body is capped at 5 MB (also after decompression), there is a 10 s timeout, and `Authorization` is only sent to the first host (`safe-fetch.test.ts`).
+- **Access control.** Without a session: 401. Without the CSRF token: 403. Another login, and another household, cannot list, change, sync, share or delete a connection, review its suggestions or use its Google link (`calendar-connections.test.ts`, `google.test.ts`, `caldav.test.ts`). Shared connections show events read-only, to the same household only.
+- **Surprise safety.** Gift deadlines and "still to buy" never list the person the gift is for; a shared event about you is hidden from you; Secret Santa dates only reach people who can see the exchange (`calendar-events.test.ts`).
+- **Hostile content.** A calendar with a hostile title (`<img onerror>`), control and bidirectional-override characters, thousands of recurring series, a hostile `RRULE` and a huge file is capped (`MAX_SERIES`, `MAX_ROWS`, 5 MB) and cleaned; titles render as React text. The CalDAV XML reader refuses `DOCTYPE` and entity declarations and absurd nesting. Calendar and event addresses used with CalDAV come from the server's own discovery, not from the caller.
+- **Secrets at rest.** Saved ICS links, CalDAV passwords and Google tokens are AES-256-GCM sealed, bound to their table row, with a key from `APP_SECRET` or a `0600` file; tampering or the wrong key is detected (`secrets.test.ts`). The API never returns them and logs carry messages only. A truncated key file is an error, not a silent new key.
+- **Google OAuth.** Only read-only scopes, PKCE (S256) and a `state` bound to the login and a `HttpOnly` cookie. The callback rejects forged, replayed, cross-user and unsigned requests; revoking a grant is handled; disconnect revokes at Google (`google.test.ts`, against a fake Google).
+- **Rate limits.** Adding calendars 10 per 10 minutes, **Sync now** 12 per 10 minutes, CalDAV discovery 10 per 10 minutes, Google callback 30 per 15 minutes per address.
+- **The outbound reminder feed** does not re-export imported events (test added).
+
+### Findings
+
+| ID | Severity | What | Status |
+| --- | --- | --- | --- |
+| C1 | Low | **Google redirect address falls back to the request's `Host`** when `PUBLIC_URL` is unset. A forged Host cannot steal a code (Google only redirects to addresses registered for the client), but it can make the sign-in fail. | Documented: set `PUBLIC_URL` (the Google setup steps say so). |
+| C2 | Low | **Backups contain the encrypted calendar logins but not `DATA_DIR/app-secret`.** A restore onto another machine cannot read them, and the connection says so. This is deliberate (key and data are separate), but it can surprise. | Documented in Connecting calendars, Securing and Upgrading: set `APP_SECRET` if you restore elsewhere. |
+| C3 | Info | **With `ALLOW_PRIVATE_CALENDAR_URLS=true`, a signed-in person can use calendar errors ("refused", "timed out") to probe your private network.** | Off by default and documented as the cost of the flag. Rate limits and a per-person connection cap slow it down. |
+| C4 | Info | **A secret iCal link is a bearer credential** to the person's calendar at Google, Apple or Microsoft. | Stored encrypted and never shown again; the guide tells people to treat it like a password. |
+
+No way to read another person's connections or events, reach internal addresses (default configuration), run script through imported text, or read stored credentials was found.
+
+### Not tested here
+
+- A real Google account, real iCloud or a real CalDAV provider. Google OAuth ran against a fake Google, CalDAV and iCloud discovery against a fake CalDAV server that follows the protocol. Provider quirks are the main remaining risk.
+- DNS rebinding was tested with a fake resolver (the address that is checked is the address that is connected to), not with a live rebinding service.
 
 ## Not tested
 

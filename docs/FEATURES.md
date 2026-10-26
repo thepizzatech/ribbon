@@ -1,6 +1,6 @@
 # Features
 
-A tour of what Ribbon does beyond the basic ledger. Everything here is in `0.3.0-dev`.
+A tour of what Ribbon does beyond the basic ledger. Everything here is in `0.4.0-dev`.
 
 ![A person's page with a wishlist, a budget and a timeline (light)](assets/screenshots/wishlist-desktop-light.webp#only-light)
 ![A person's page with a wishlist, a budget and a timeline (dark)](assets/screenshots/wishlist-desktop-dark.webp#only-dark)
@@ -8,6 +8,19 @@ A tour of what Ribbon does beyond the basic ledger. Everything here is in `0.3.0
 ## The basics
 
 The **Overview** shows gifts this year (received, given, spent, thank-yous sent) against last year, upcoming dates, where the money went by occasion or person, budgets, and a **Needs you** list of thank-yous to write and gifts still to buy. The **Ledger** lists every gift, **People** lists everyone you give to or receive from (with what you gave and got), and a global search (`Ctrl`/`⌘` + `K`) finds anything. Ribbon is built for the phone first and follows your light or dark theme.
+
+## Calendar
+
+![The Calendar page, week view (light)](assets/screenshots/calendar-desktop-light.webp#only-light)
+![The Calendar page, week view (dark)](assets/screenshots/calendar-desktop-dark.webp#only-dark)
+
+The **Calendar** page shows birthdays, anniversaries, yearly occasions, gift deadlines, Secret Santa dates, your own events and events imported from other calendars, in a **Day**, **Week** or compact **Month** view with previous/next and **Today**. Filter chips pick family members and kinds of events (including each connected calendar). Three tiles at the top count **events this week**, **birthdays in the next 30 days** and **gifts still needed**; a side panel lists what is coming up and gift deadlines, with **Add gift idea** one tap away. Click an event for details and the actions that fit it: add a gift idea for that person, go to their page, or edit your own events. On a phone it collapses to one day at a time with the panel below.
+
+You can add your own events (title, date and time or all day, an optional person, repeat every year, private or shared with the household). Events are only shown to the household in the ways you choose, and a gift planned for you never appears on your own calendar.
+
+**Settings → Calendars** connects Google, Apple/iCloud, Outlook, Fastmail, Nextcloud and anything else that offers an iCal link, an `.ics` file or CalDAV, read-only and private to you unless you share a connection. Birthday-like events found there go through a review step (match a person, create one, or ignore). Details, including the Google OAuth setup, are in [Connecting calendars](calendars.md).
+
+Everything on the page loads with a short staggered fade-in and counting numbers (switched off for people who prefer reduced motion), also on Overview and the lists.
 
 ## Ask
 
@@ -26,6 +39,8 @@ Set a yearly budget per person or per occasion. Overview and the person page sho
 People have birthdays and anniversaries; occasions can repeat yearly. The Overview "Upcoming" card lists what is coming, with the days left.
 
 ## Calendar feed (ICS)
+
+The opposite direction of [Connecting calendars](calendars.md): Ribbon's own reminders for your calendar app. It never includes events imported from other calendars.
 
 Settings → Account → Calendar creates a secret link (`/api/calendar/<token>.ics`) to subscribe to from Google, Apple or Outlook calendar. It carries upcoming dates with a reminder (default 14 days). Regenerating the link revokes the old one. Treat the link like a password.
 
@@ -62,7 +77,7 @@ Over HTTPS Ribbon offers "install" on phones and desktops, has an icon set and a
 ![The guided tour on a new install (light)](assets/screenshots/tour-desktop-light.webp#only-light)
 ![The guided tour on a new install (dark)](assets/screenshots/tour-desktop-dark.webp#only-dark)
 
-Seven skippable steps (dashboard, add a gift, ledger, people, Ask, theme, settings and backups), built with [driver.js](https://driverjs.com) (MIT). It opens on a login's first visit, remembers "done" or "skipped" per login (`user_prefs.tour_state`, saved with `POST /api/me/tour`), and can be replayed from Settings → Help.
+Eight skippable steps (dashboard, add a gift, calendar, ledger, people, Ask, theme, settings and backups), built with [driver.js](https://driverjs.com) (MIT). It opens on a login's first visit, remembers "done" or "skipped" per login (`user_prefs.tour_state`, saved with `POST /api/me/tour`), and can be replayed from Settings → Help.
 
 - In development with `SEED_SAMPLE_DATA` on, the tour stays off unless `TOUR_IN_DEV=true`.
 - `TOUR_ALWAYS=true` shows it on every visit until it is finished with Done (for testing, in any mode).
@@ -81,4 +96,4 @@ The first visit creates only the owner account (and asks for `SETUP_CODE` when o
 
 ## Real installs never ship sample data
 
-`SEED_SAMPLE_DATA` defaults to off in production and in the Docker image. A new database starts with the owner account, then the Welcome setup (see above).
+`SEED_SAMPLE_DATA` defaults to off in production and in the Docker image. A new database starts with the owner account, then the Welcome setup (see above), and with no calendars connected. The sample household (when you switch it on for development) includes a few sample calendar events.

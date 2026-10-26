@@ -18,7 +18,7 @@ Ribbon keeps track of the gifts your household gives and receives, shows what ne
 ![The Ribbon overview in light mode](assets/screenshots/overview-desktop-light.webp#only-light)
 ![The Ribbon overview in dark mode](assets/screenshots/overview-desktop-dark.webp#only-dark)
 
-!!! warning "Status: in development (`0.3.0-dev`)"
+!!! warning "Status: in development (`0.4.0-dev`)"
 
     Ribbon works and keeps your data on your own server, but there is no release yet and you should expect rough edges. It is built for one family. The Docker image to use today is the `dev` tag, built from the newest `main`. See [Upgrading](upgrading.md) for what that means in practice.
 
@@ -34,9 +34,9 @@ Ribbon keeps track of the gifts your household gives and receives, shows what ne
 
     Reserve an item so nobody double-buys. The person whose list it is never sees the marks, even through the API. [Wishlists](FEATURES.md#wishlists)
 
--   :material-calendar-heart: **Dates and a calendar feed**
+-   :material-calendar-heart: **A calendar that pulls in yours**
 
-    Birthdays, anniversaries and yearly occasions with a countdown, plus a secret ICS link for your calendar app. [Upcoming dates](FEATURES.md#upcoming-dates-and-recurring-occasions)
+    Birthdays, gift deadlines and your own events in a day, week or month view, with Google, Apple, Outlook or any CalDAV/ICS calendar connected read-only and private to you. [Calendar](FEATURES.md#calendar) · [Connecting calendars](calendars.md)
 
 -   :material-shuffle-variant: **Secret Santa**
 
@@ -68,6 +68,7 @@ Ribbon is designed for the phone first and installs as an app over HTTPS.
 | Look up an environment variable | [Configuration](configuration.md) |
 | Reach it from outside my home safely | [Securing your install](securing.md) and [HTTPS and reverse proxies](REVERSE-PROXY.md) |
 | Know what a feature does | [Features](FEATURES.md) |
+| Connect Google, iCloud or Outlook calendars | [Connecting calendars](calendars.md) |
 | Back up or restore my data | [Backups & restore](backups.md) |
 | Fix something that is not working | [Troubleshooting & FAQ](troubleshooting.md) |
 | Help build Ribbon | [Contributing](contributing.md) |

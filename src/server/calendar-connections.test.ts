@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { afterEach, beforeEach, describe, test } from "node:test";
 import { feedServer, ics, inDays, iso, ymd } from "./calendar-test-kit.ts";
 import { dueConnections, runDue, syncConnection } from "./calendar-sync.ts";
+import { handleApi } from "./api.ts";
 import { call, freshDb, registerCleanup, secondHousehold, signedIn } from "./test-helpers.ts";
 
 registerCleanup();
@@ -21,6 +22,22 @@ const feed = (...titles: string[]) => ics(titles.map((t, i) => [`UID:e${i}-${t.l
 type Ev = { id: string; source: string; title: string; connectionName?: string; tone: string };
 const titles = async (db: ReturnType<typeof freshDb>, auth: ReturnType<typeof signedIn>, source = "external", days = 30) =>
   ((await call(db, "GET", `/api/calendar/events?${range(days)}`, undefined, auth)).body.events as Ev[]).filter((e) => e.source === source).map((e) => e.title);
+
+describe("outbound reminder feed", () => {
+  test("never re-exports imported events (only Ribbon's own reminders)", async () => {
+    const db = freshDb();
+    const me = signedIn(db, { username: "avery", personId: "p-avery" });
+    const f = await feedServer(feed("Secret dentist visit"));
+    assert.equal((await call(db, "POST", "/api/calendars", { kind: "ics_url", url: f.url }, me)).status, 201);
+    const token = (await call(db, "POST", "/api/calendar/token", {}, me)).body.token as string;
+    const out = await call(db, "GET", `/api/calendar/${token}.ics`);
+    assert.equal(out.status, 200);
+    assert.ok(!JSON.stringify(out).includes("Secret dentist visit"));
+    const raw = await handleApiText(db, token);
+    assert.ok(!raw.includes("Secret dentist visit"), "the .ics feed has no imported events");
+    assert.match(raw, /BEGIN:VCALENDAR/);
+  });
+});
 
 describe("ICS link connections", () => {
   test("with no name given, the calendar's own name is used", async () => {
@@ -381,3 +398,8 @@ describe("birthday review", () => {
     assert.equal(made.body.person.name, "<img src=x onerror=1>Eve");
   });
 });
+
+async function handleApiText(db: Parameters<typeof handleApi>[1], token: string): Promise<string> {
+  const res = await handleApi(new Request(`http://localhost:8080/api/calendar/${token}.ics`), db);
+  return res.text();
+}

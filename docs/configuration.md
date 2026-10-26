@@ -73,13 +73,26 @@ See [Backups & restore](backups.md).
 | --- | --- | --- |
 | `XAI_API_KEY` | unset | Turns on the **Ask** page. A question sends a trimmed copy of your gift list to xAI, so leave it unset if you do not want that. Each login gets 30 questions an hour. |
 
+## Calendars
+
+Everything about connecting calendars is under **Settings → Calendars**. See [Connecting calendars](calendars.md) for how, and [Securing your install](securing.md#calendar-connections) for what the server will and will not fetch.
+
+| Variable | Default | What it does |
+| --- | --- | --- |
+| `APP_SECRET` | auto-generated | Key that encrypts the calendar logins Ribbon stores (Google tokens, CalDAV passwords, secret calendar links). Without it, Ribbon generates a random key once and keeps it in `DATA_DIR/app-secret` (mode `0600`). Backups contain the encrypted logins but **not** that key file, so set `APP_SECRET` if you ever restore onto another machine, or reconnect the calendars afterwards. At least 16 characters. Changing it makes saved logins unreadable (they show "can't read the saved login" until reconnected). |
+| `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | unset | Turn on **Sign in with Google** for calendars (read-only, optionally contact birthdays). Both are needed. Create the OAuth client as described in [Connecting calendars](calendars.md#google-sign-in-oauth). Register `<PUBLIC_URL>/api/calendars/google/callback` as the redirect URI. |
+| `CALENDAR_SYNC_HOURS` | `6` | How often connected calendars refresh (1 to 168). Each connection can override it. Failures back off automatically. |
+| `CALENDAR_MAX_CONNECTIONS` | `10` | How many calendars one login may connect. |
+| `CALENDAR_SYNC` | `true` | `false` turns the background refresh off. **Sync now** still works. |
+| `ALLOW_PRIVATE_CALENDAR_URLS` | `false` | Allow calendar links and CalDAV servers on private or loopback addresses (for example a Nextcloud or Radicale on your own network). Off by default so that a calendar link cannot be used to probe your home network or a cloud metadata service. |
+
 ## Tour, sample data and development
 
 | Variable | Default | What it does |
 | --- | --- | --- |
 | `TOUR_ALWAYS` | `false` | Show the guided tour on every sign-in until someone finishes it with **Done** (testing). |
 | `TOUR_IN_DEV` | `false` | Allow the auto-opening tour in sample-data development mode. |
-| `SEED_SAMPLE_DATA` | `false` in production, `true` in `npm run dev` | Load a sample household into a brand-new database. Never use it for a real install. In development it also creates a dev login. |
+| `SEED_SAMPLE_DATA` | `false` in production, `true` in `npm run dev` | Load a sample household (with sample calendar events) into a brand-new database. Never use it for a real install: real installs start with no calendars at all. In development it also creates a dev login. |
 | `DEV_USERNAME`, `DEV_PASSWORD` | `admin`, `ribbon-dev-password` | The dev login created when sample data is on. Development only. |
 
 ## Set by the image
@@ -104,6 +117,9 @@ PUBLIC_URL=https://ribbon.example.com
 
 # Required to create the owner if the server is reachable from the internet
 SETUP_CODE=change-me-to-something-long
+
+# Keep this if you restore backups onto another machine (it decrypts saved calendar logins)
+APP_SECRET=a-long-random-string-you-keep-somewhere-safe
 
 # Nightly backups at 03:00, keep two weeks (these are the defaults)
 BACKUP_CRON=0 3 * * *

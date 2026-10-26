@@ -99,6 +99,19 @@ Ribbon checks every provider endpoint against the same https rule as the issuer 
 - Every change needs a CSRF token and a same-site `Origin`.
 - **Lockout:** 5 wrong passwords for one account from one address, 20 for one account from anywhere, or 30 from one address across accounts lock sign-in for 15 minutes. A forged `X-Forwarded-For` cannot dodge it. The counters are in memory and reset when the container restarts.
 
+## Calendar connections
+
+Connecting calendars means the server fetches addresses that people type in, which is a classic way to reach things that should be private (server-side request forgery). Ribbon's calendar fetcher is built for that:
+
+- **Only `http(s)` and `webcal`** (rewritten to `https`) are accepted, with no credentials in the address. CalDAV passwords go over `https` only.
+- **After DNS resolution**, every address is checked and the connection is made to the checked address itself (so a name that changes its answer between check and connect does not help an attacker). Loopback, private (RFC 1918), link-local, carrier-grade NAT, multicast, unique-local IPv6 and cloud metadata addresses (such as `169.254.169.254`) are refused, including IPv4-mapped IPv6 forms. **Redirects are followed by hand**, at most five, and each hop is checked the same way.
+- A **10 second timeout**, a **5 MB** cap on any response (also while streaming), and a limited number of calendars (`CALENDAR_MAX_CONNECTIONS`) and events per calendar.
+- **`ALLOW_PRIVATE_CALENDAR_URLS=true`** is the escape hatch for calendar servers on your own network. It is off by default and only changes the private-address rule (not the scheme, size or timeout limits). Turn it on only if you need it: it lets anyone with a login ask the server to fetch an address on your network.
+- Credentials are only sent to the host the person entered (and, for iCloud, Apple's own `*.icloud.com` partition hosts), never to a redirect target elsewhere.
+- Saved logins (secret calendar links, CalDAV passwords, Google tokens) are **encrypted at rest** with AES-256-GCM, bound to their row, using a key from `APP_SECRET` or a random one in `DATA_DIR/app-secret` (mode `0600`). They are never returned by the API or written to logs. See the note about backups in [Connecting calendars](calendars.md#backups-and-moving-to-another-server).
+- Imported calendars are **private to the person who added them** unless they choose to share them with their household. **Sync now**, adding connections and discovery are rate limited, and all changes need the usual CSRF token.
+- Imported text is cleaned (control and bidirectional-override characters removed, length limits) and always shown as plain text, never as HTML.
+
 ## Container hardening
 
 The image runs as the unprivileged `node` user and only `/data` is writable. The shipped `docker-compose.yml` also does:
@@ -118,7 +131,8 @@ The image also has a health check on `/api/health`, which answers over plain HTT
 
 - Back up the `ribbon_data` volume. Ribbon writes nightly snapshots into it, but those live on the same disk, so copy them elsewhere. See [Backups & restore](backups.md). Backup files are owner-only on disk (`0600`, folder `0700`) because they hold every household's data.
 - Keep `.env` out of git and out of screenshots; it can hold `SETUP_CODE`, `XAI_API_KEY` and `OIDC_CLIENT_SECRET`.
-- Treat your ICS calendar link like a password. Regenerating it revokes the old one.
+- Treat your ICS calendar link like a password. Regenerating it revokes the old one. The same goes for any secret calendar link you paste into Settings → Calendars.
+- Back up `APP_SECRET` (or `DATA_DIR/app-secret`) with your other secrets if you use calendar connections: it decrypts the saved calendar logins.
 
 ## Security audit summary
 
@@ -133,5 +147,7 @@ Ribbon `0.3.0-dev.2` had a full review against a **running production build**, n
 | Low | 12 | CSV link checks, calendar-feed injection, passkey user verification, SSO endpoint checks, Ask limits, backup file permissions, headers, CI hygiene, container capabilities, dependencies |
 
 **Accepted risks** include a CSP that still allows inline scripts (the framework's server rendering needs them), household members being trusted editors of their shared ledger, and the instance admin being able to read everything in backups. Each has its reasoning in the report.
+
+Calendar connections (`0.4.0-dev.1`) had their own review: 19 hostile addresses (loopback, link-local, metadata, decimal and IPv4-mapped forms, rebinding-style names) were refused, access control, surprise safety and credential storage were checked, and four low or informational notes were recorded (none exploitable in the default setup).
 
 The complete list, with how each item was verified, what was checked and found sound, and what was not tested, is in the [full security audit](SECURITY-AUDIT.md). To report a problem privately, see the [security policy](https://github.com/thepizzatech/ribbon/blob/main/SECURITY.md) (do not open a public issue).

@@ -85,7 +85,9 @@ nav:
       - Securing your install: securing.md
       - HTTPS and reverse proxies: REVERSE-PROXY.md
       - Security audit: SECURITY-AUDIT.md
-  - Features: FEATURES.md
+  - Features:
+      - Features: FEATURES.md
+      - Connecting calendars: calendars.md
   - Help:
       - Troubleshooting & FAQ: troubleshooting.md
       - Changelog: changelog.md

@@ -11,7 +11,7 @@ Keep track of the gifts your household gives and gets, see what still needs you,
 [![CI](https://github.com/thepizzatech/ribbon/actions/workflows/ci.yml/badge.svg)](https://github.com/thepizzatech/ribbon/actions/workflows/ci.yml)
 [![Docs](https://github.com/thepizzatech/ribbon/actions/workflows/docs.yml/badge.svg)](https://ribbon.thepizza.tech)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
-[![Version 0.3.0-dev.2](https://img.shields.io/badge/version-0.3.0--dev.2-orange.svg)](CHANGELOG.md)
+[![Version 0.4.0-dev.1](https://img.shields.io/badge/version-0.4.0--dev.1-orange.svg)](CHANGELOG.md)
 [![Status: in development](https://img.shields.io/badge/status-in%20development-yellow.svg)](#status-and-roadmap)
 [![Docker image](https://img.shields.io/badge/docker-ghcr.io%2Fthepizzatech%2Fribbon-2496ED?logo=docker&logoColor=white)](https://github.com/thepizzatech/ribbon/pkgs/container/ribbon)
 
@@ -39,19 +39,19 @@ Ribbon is a small web app for a family's gifts: what you gave, what you got, who
 Everything (family, people, gifts, occasions, logins) lives in **one SQLite file on your own server**, so every phone and laptop in the family sees the same data and nothing goes to anyone else's cloud. It runs as a single Docker container.
 
 > [!NOTE]
-> **Status: in development (`0.3.0-dev`).** It works and keeps your data on your server, but there is no release yet and you should expect rough edges. It is built for one family. See [Status and roadmap](#status-and-roadmap).
+> **Status: in development (`0.4.0-dev`).** It works and keeps your data on your server, but there is no release yet and you should expect rough edges. It is built for one family. See [Status and roadmap](#status-and-roadmap).
 
 ## Features
 
 - **Gift ledger and overview.** Log gifts given and received; see this year against last year, where the money went by occasion or person, and a **Needs you** list of thank-yous owed and gifts still to buy.
 - **Surprise-safe wishlists.** Reserve or mark an item bought so nobody double-buys. The person whose list it is never sees the marks, and the server enforces it, even through the API.
 - **Budgets.** Yearly budgets per person or per occasion, shown against what you have spent.
-- **Upcoming dates and a calendar feed.** Birthdays, anniversaries and yearly occasions with a countdown, plus a secret ICS link for Google, Apple or Outlook calendar.
+- **Calendar.** A day, week and month calendar of birthdays, anniversaries, gift deadlines and your own events, that can also pull in your Google, Apple/iCloud, Outlook or any CalDAV/ICS calendar (read-only, private to you, with a review step before birthdays become reminders). Plus a secret ICS link going the other way.
 - **Secret Santa.** Draw names across a household or linked households, with exclusions (couples, last year's match) and no peeking.
 - **Sharing between households.** One server can hold several households, each with a private ledger. Link two with a short single-use code and share just the people you choose.
 - **Sign-in your way.** Passwords, **passkeys** and **single sign-on** (OpenID Connect), with sign-in lockout and optional first-owner setup code.
 - **Backups.** Scheduled nightly snapshots, download and restore from the app, plus JSON and **CSV** import and export with a preview.
-- **Installable app (PWA)** over HTTPS, with a seven-step guided tour and a Welcome setup for new families.
+- **Installable app (PWA)** over HTTPS, with a eight-step guided tour and a Welcome setup for new families.
 - **Ask** (optional). Plain-language questions about your ledger, if you give it an xAI API key.
 
 More detail in [docs/FEATURES.md](docs/FEATURES.md) or on the [docs site](https://ribbon.thepizza.tech/FEATURES/).
@@ -72,6 +72,17 @@ Light and dark follow your GitHub theme.
     <td align="center"><sub>Wishlist and budget</sub></td>
     <td align="center"><sub>Secret Santa</sub></td>
     <td align="center"><sub>Welcome setup</sub></td>
+  </tr>
+</table>
+
+<table>
+  <tr>
+    <td width="50%"><picture><source media="(prefers-color-scheme: dark)" srcset="docs/assets/screenshots/calendar-desktop-dark.webp"><img src="docs/assets/screenshots/calendar-desktop-light.webp" alt="The Calendar page, week view"></picture></td>
+    <td width="50%"><picture><source media="(prefers-color-scheme: dark)" srcset="docs/assets/screenshots/calendars-settings-desktop-dark.webp"><img src="docs/assets/screenshots/calendars-settings-desktop-light.webp" alt="Settings, Calendars: connected calendars"></picture></td>
+  </tr>
+  <tr>
+    <td align="center"><sub>Calendar: birthdays, gift deadlines and your calendars</sub></td>
+    <td align="center"><sub>Connecting calendars (Settings)</sub></td>
   </tr>
 </table>
 
@@ -134,6 +145,10 @@ Settings are environment variables in a `.env` file next to `docker-compose.yml`
 | `SETUP_CODE` | unset | Code required to create the first owner. Set it if the server is reachable from outside. |
 | `ALLOW_INSECURE_LOGIN` | `false` | Allow password sign-in over plain HTTP from public addresses. |
 | `ALLOW_PUBLIC_SETUP` | `false` | Allow creating the first owner from a public address with no code. Not recommended. |
+| `APP_SECRET` | auto-generated | Key for stored calendar logins. Set it if you restore backups on another machine. |
+| `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | unset | Turn on Sign in with Google for calendars ([how](https://ribbon.thepizza.tech/calendars/)). |
+| `ALLOW_PRIVATE_CALENDAR_URLS` | `false` | Allow calendar servers on your own network. Off by default (SSRF protection). |
+| `CALENDAR_SYNC_HOURS`, `CALENDAR_MAX_CONNECTIONS`, `CALENDAR_SYNC` | `6`, `10`, `true` | Calendar refresh interval, connections per person, and the background refresh switch. |
 | `OIDC_ISSUER`, `OIDC_CLIENT_ID`, `OIDC_CLIENT_SECRET` | unset | Turn on single sign-on. |
 | `BACKUP_CRON` | `0 3 * * *` | When to take scheduled backups; `off` disables. |
 | `BACKUP_KEEP` | `14` | How many scheduled backups to keep. |
@@ -155,7 +170,7 @@ What is on you when self-hosting: use an HTTPS proxy and `PUBLIC_URL`, do not pu
 
 ## Status and roadmap
 
-Ribbon is in **active development**: the current build is `0.3.0-dev.2` and there is **no release, beta branch or tag yet**. The `dev` image tracks `main`.
+Ribbon is in **active development**: the current build is `0.4.0-dev.1` and there is **no release, beta branch or tag yet**. The `dev` image tracks `main`.
 
 - Done: the ledger, wishlists, budgets, upcoming dates and ICS feed, Secret Santa, sharing between households, CSV, passkeys and SSO, scheduled backups, the Welcome setup and tour, a full security review.
 - Next: cut the first beta (see [docs/RELEASING.md](docs/RELEASING.md); the multi-arch release build has not been run yet), then publish versioned image tags.

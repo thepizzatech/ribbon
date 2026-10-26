@@ -200,3 +200,9 @@ html[data-theme="dark"] {
 @media (max-width: 767px) { .wk[data-days="7"][data-pick="5"] .wk-day:not([data-i="5"]), .wk[data-days="7"][data-pick="5"] .wk-allcell:not([data-i="5"]), .wk[data-days="7"][data-pick="5"] .wk-col:not([data-i="5"]) { display: none; } }
 @media (max-width: 767px) { .wk[data-days="7"][data-pick="6"] .wk-day:not([data-i="6"]), .wk[data-days="7"][data-pick="6"] .wk-allcell:not([data-i="6"]), .wk[data-days="7"][data-pick="6"] .wk-col:not([data-i="6"]) { display: none; } }
 @media (max-width: 767px) { .wk[data-days="7"] { --n: 1; } }
+
+/* longer titles wrap to two lines when the block is tall enough */
+.ev:not(.is-short) .ev-title .truncate { display: -webkit-box; white-space: normal; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow-wrap: anywhere; }
+.ev:not(.is-short) .ev-title { align-items: flex-start; }
+.ev:not(.is-short) .ev-icon { margin-top: 2px; }
+.conn-main > .min-w-0 { flex: 1 1 14rem; }
