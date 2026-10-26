@@ -60,7 +60,7 @@
     "node-ical": "^0.27.3",
     "react": "^19.2.0",
     "react-day-picker": "^9.14.0",
-    "react-dom": "^19.2.0",
+    "react-dom": "^19.3.1",
     "react-hook-form": "^7.54.0",
     "react-resizable-panels": "^4.6.5",
     "recharts": "^2.13.0",
