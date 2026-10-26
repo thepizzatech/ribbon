@@ -53,7 +53,7 @@ export function rangeLabel(view: View, anchor: string): string {
 
 export function titleOf(view: View, anchor: string, today: string): string {
   if (view === "day") return anchor === today ? "Today" : fmt(anchor, { weekday: "long" });
-  if (view === "month") return fmt(anchor, { month: "long" });
+  if (view === "month") return monthStart(anchor) === monthStart(today) ? "This month" : fmt(anchor, { month: "long" });
   const week = weekStart(anchor);
   if (week === weekStart(today)) return "This week";
   if (week === weekStart(addDays(today, 7))) return "Next week";

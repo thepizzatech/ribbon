@@ -15,12 +15,14 @@ import { syncConnection } from "./calendar-sync.ts";
 import {
   connectionCount,
   deleteConnection,
+  getConnection,
   getOwnConnection,
   insertConnection,
   isColor,
   looksLikeIcs,
   ownConnections,
   pendingReviews,
+  readState,
   replaceEvents,
   markSynced,
   viewConnection,
@@ -109,6 +111,9 @@ export const calendarConnectionsHandler: Handler = async (c) => {
         deleteConnection(db, row.id); // a link that can't be read isn't kept
         return error(400, result.error);
       }
+      // No name given: use the calendar's own name (X-WR-CALNAME) when the feed has one.
+      const calName = cleanText(readState<{ calName?: string }>(getConnection(db, row.id)!).calName, 60);
+      if (!cleanText(input.name, 60) && calName) db.prepare("UPDATE calendar_connections SET name = ? WHERE id = ?").run(calName, row.id);
       return json({ connection: viewConnection(getOwnConnection(db, row.id, user.id, user.householdId)!), ...listing(db, user.id, user.householdId) }, { status: 201 });
     }
 

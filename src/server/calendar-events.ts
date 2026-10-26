@@ -205,7 +205,7 @@ function importedEvents(db: Db, user: User, range: Range): CalEvent[] {
        JOIN users u ON u.id = c.user_id
        LEFT JOIN calendar_reviews r ON r.connection_id = e.connection_id AND r.uid = e.uid
        WHERE c.enabled = 1 AND c.household_id = ? AND (c.user_id = ? OR c.shared = 1)
-         AND COALESCE(r.state, '') != 'matched'
+         AND COALESCE(r.state, '') NOT IN ('matched', 'created')
          AND e.starts < ? AND e.ends > ?
        ORDER BY e.starts LIMIT 3000`,
     )

@@ -162,7 +162,11 @@ function Reviews() {
   });
   const items = list.data?.items ?? [];
   if (items.length === 0) return null;
-  const label = (i: ReviewItem) => `${i.name} ${i.kind === "birthday" ? "birthday" : "anniversary"}`;
+  const label = (i: ReviewItem) => `${i.name}’s ${i.kind === "birthday" ? "birthday" : "anniversary"}`;
+  const pretty = (d: string) => {
+    const m = /^(?:(\d{4})-|--)(\d{2})-(\d{2})$/.exec(d);
+    return m ? new Date(2000, Number(m[2]) - 1, Number(m[3])).toLocaleDateString(undefined, { month: "short", day: "numeric" }) + (m[1] ? `, ${m[1]}` : "") : d;
+  };
   return (
     <section className="card stack" aria-labelledby="rev-title">
       <div>
@@ -178,7 +182,7 @@ function Reviews() {
             <li key={key} className="rev">
               <p className="font-medium">{label(i)}</p>
               <p className="text-xs text-muted">
-                “{i.title}” in {i.connectionName} · {i.date.startsWith("--") ? i.date.slice(2) : i.date}
+                “{i.title}” in {i.connectionName} · {pretty(i.date)}
               </p>
               {clash?.key === key ? (
                 <div className="mt-2 flex flex-wrap items-center gap-2">

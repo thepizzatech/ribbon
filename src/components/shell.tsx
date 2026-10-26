@@ -273,7 +273,8 @@ function Topbar() {
 function useTourAutostart() {
   const session = useSession();
   const navigate = useNavigate();
-  const autoShow = session.data?.tour?.autoShow === true;
+  const ready = useLedger((state) => state.ready);
+  const autoShow = session.data?.tour?.autoShow === true && ready;
   useEffect(() => {
     if (!autoShow) return;
     const timer = window.setTimeout(() => {
@@ -294,6 +295,7 @@ function useTourAutostart() {
 
 function Frame() {
   useTourAutostart();
+  const ready = useLedger((state) => state.ready);
   const pathname = useRouterState({ select: (state) => state.location.pathname });
   return (
     <div className="app">
@@ -304,10 +306,12 @@ function Frame() {
         <Sidebar />
         <div className="app-main">
           <Topbar />
-          <main id="main" className="page">
-            <div key={pathname} className="page-enter">
-              <Outlet />
-            </div>
+          <main id="main" className="page" aria-busy={!ready}>
+            {ready ? (
+              <div key={pathname} className="page-enter">
+                <Outlet />
+              </div>
+            ) : null}
           </main>
         </div>
         <nav className="dock" aria-label="Primary">

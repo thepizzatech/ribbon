@@ -23,6 +23,17 @@ const titles = async (db: ReturnType<typeof freshDb>, auth: ReturnType<typeof si
   ((await call(db, "GET", `/api/calendar/events?${range(days)}`, undefined, auth)).body.events as Ev[]).filter((e) => e.source === source).map((e) => e.title);
 
 describe("ICS link connections", () => {
+  test("with no name given, the calendar's own name is used", async () => {
+    const db = freshDb();
+    const me = signedIn(db, { username: "avery", personId: "p-avery" });
+    const named = await feedServer(ics([["UID:n1@x", `DTSTART;VALUE=DATE:${ymd(inDays(3))}`, `DTEND;VALUE=DATE:${ymd(inDays(4))}`, "SUMMARY:Thing"]], ["X-WR-CALNAME:Rivers family"]));
+    const added = await call(db, "POST", "/api/calendars", { kind: "ics_url", url: named.url }, me);
+    assert.equal(added.status, 201, added.text);
+    assert.equal(added.body.connection.name, "Rivers family");
+    const other = await feedServer(ics([["UID:n2@x", `DTSTART;VALUE=DATE:${ymd(inDays(3))}`, `DTEND;VALUE=DATE:${ymd(inDays(4))}`, "SUMMARY:Thing"]], ["X-WR-CALNAME:Ignored"]));
+    assert.equal((await call(db, "POST", "/api/calendars", { kind: "ics_url", url: other.url, name: "Mine" }, me)).body.connection.name, "Mine", "a name the person typed wins");
+  });
+
   test("add, import, refresh with ETag, and never reveal the address", async () => {
     const db = freshDb();
     const me = signedIn(db, { username: "avery", personId: "p-avery" });
@@ -342,6 +353,7 @@ describe("birthday review", () => {
     assert.equal(created.body.person.birthday, "2000-06-22");
     assert.equal(created.body.person.relationship, "friend");
     assert.equal((await decide("b-new", { action: "create", name: "again" })).status, 404, "decided once");
+    assert.ok(!(await titles(db, me, "external", 100)).includes("Nia Newcomer birthday"), "a created person's imported event is hidden too (no duplicate)");
 
     assert.equal((await decide("b-skip", { action: "ignore" })).status, 200);
     assert.ok((await titles(db, me, "external", 100)).includes("Work Friend birthday"), "ignored suggestions stay on the calendar as events");

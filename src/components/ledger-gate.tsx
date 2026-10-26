@@ -161,7 +161,8 @@ export function LedgerGate({ children }: { children: ReactNode }) {
       />
     );
   }
-  if (!ready || !importResolved) return <Loading />;
+  // Signed in, ledger still on its way: show the app frame (sidebar, header, tab bar) right away.
+  // The Shell leaves the page itself empty until the ledger arrives, so nothing flashes "empty".
 
   return (
     <>
