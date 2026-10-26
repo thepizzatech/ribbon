@@ -1,4 +1,5 @@
 // Accounts, sessions (stored in SQLite, only a hash of the token), and login lockout.
+import { seedSampleCalendars } from "./calendar-sample.ts";
 import { createHash, randomBytes, randomUUID, timingSafeEqual } from "node:crypto";
 import { devAccount, isProduction, seedSampleData } from "./config.ts";
 import type { Db } from "./db.ts";
@@ -261,6 +262,7 @@ export function ensureDevAccount(db: Db): User | null {
     passwordHash: hashPasswordSync(password),
     personId: db.prepare("SELECT id FROM people WHERE id = 'p-avery'").get() ? "p-avery" : null,
   });
+  seedSampleCalendars(db, user);
   console.warn(
     `[ribbon] DEVELOPMENT ONLY: created owner login "${username}" with password "${password}" (SEED_SAMPLE_DATA is on). ` +
       "Never run this configuration in production.",

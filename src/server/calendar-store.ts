@@ -140,6 +140,7 @@ export function viewConnection(row: ConnectionRow, extra: { owner?: string } = {
   return {
     id: row.id,
     kind: row.kind,
+    experimental: row.kind === "caldav",
     name: row.name,
     color: row.color,
     enabled: row.enabled === 1,

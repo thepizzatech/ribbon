@@ -385,12 +385,16 @@ describe("onboarding", () => {
     const user = ensureDevAccount(dev);
     assert.equal(user?.username, "admin");
     assert.equal(ensureDevAccount(dev), null); // only when no users exist
+    const sample = (dev.prepare("SELECT COUNT(*) AS n FROM calendar_events").get() as { n: number }).n;
+    assert.ok(sample > 8, "sample-data mode ships sample calendar events");
 
     process.env.NODE_ENV = "production";
     assert.equal(ensureDevAccount(freshDb({ seed: true })), null);
     process.env.NODE_ENV = "test";
     process.env.SEED_SAMPLE_DATA = "false";
-    assert.equal(ensureDevAccount(freshDb({ seed: true })), null);
+    const real = freshDb({ seed: true });
+    assert.equal(ensureDevAccount(real), null);
+    assert.equal((real.prepare("SELECT COUNT(*) AS n FROM calendar_connections").get() as { n: number }).n, 0, "real installs start with no calendars");
   });
 });
 
