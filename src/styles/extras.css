@@ -8,7 +8,9 @@
 .wish-main { min-width: 0; flex: 1 1 14rem; }
 .wish-title { font-weight: 500; overflow-wrap: anywhere; }
 .wish-title a { display: inline-flex; align-items: center; gap: 4px; color: inherit; text-decoration: underline; text-decoration-color: var(--color-border); text-underline-offset: 3px; }
-.wish-title a:hover { text-decoration-color: currentColor; }
+@media (hover: hover) and (pointer: fine) {
+  .wish-title a:hover { text-decoration-color: currentColor; }
+}
 .wish-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; margin-top: 4px; color: var(--color-muted); font-size: 0.8125rem; }
 .wish-claim { display: inline-flex; align-items: center; gap: 4px; margin-top: 6px; color: var(--tone-in-fg); font-size: 0.8125rem; font-weight: 500; }
 .wish-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; }
@@ -34,7 +36,9 @@
 /* Settings page */
 .tabs { display: flex; gap: 4px; margin-bottom: 20px; overflow-x: auto; border-bottom: 1px solid var(--color-border); }
 .tab { flex: none; border: 0; border-bottom: 2px solid transparent; background: transparent; padding: 10px 14px; color: var(--color-muted); font: inherit; font-size: 0.875rem; font-weight: 500; }
-.tab:hover { color: var(--color-foreground); }
+@media (hover: hover) and (pointer: fine) {
+  .tab:hover { color: var(--color-foreground); }
+}
 .tab[aria-selected="true"] { border-bottom-color: var(--color-foreground); color: var(--color-foreground); }
 .settings-grid { display: grid; gap: 16px; grid-template-columns: minmax(0, 1fr); max-width: 760px; }
 .stack { display: flex; flex-direction: column; gap: 12px; }
@@ -90,7 +94,7 @@
   .driver-popover.ribbon-tour, .driver-overlay, #driver-highlighted-element-stage { transition: none !important; animation: none !important; }
 }
 .install-hint { display: flex; flex-direction: column; gap: 8px; }
-.person-link { min-height: 34px !important; max-width: 9.5rem; padding: 0 8px; font-size: 0.8125rem !important; }
+.person-link { min-height: 34px !important; max-width: 9.5rem; padding: 0 8px; font-size: 0.8125rem; }
 .user-row { flex-wrap: wrap; }
 .occasion-row .occ-date { max-width: 5.5rem; text-align: center; }
 .check { display: flex; align-items: flex-start; gap: 8px; font-size: 0.875rem; }
@@ -98,5 +102,7 @@
 .csv-map { display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr)); }
 .santa-people { display: grid; gap: 4px 12px; grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr)); }
 .driver-popover.ribbon-tour .driver-popover-close-btn { top: 10px; right: 10px; width: 28px; min-height: 0 !important; height: 28px; border: 0 !important; background: transparent !important; padding: 0 !important; font-size: 20px; line-height: 1; }
-.driver-popover.ribbon-tour .driver-popover-close-btn:hover { background: var(--color-secondary) !important; }
+@media (hover: hover) and (pointer: fine) {
+  .driver-popover.ribbon-tour .driver-popover-close-btn:hover { background: var(--color-secondary) !important; }
+}
 .driver-popover.ribbon-tour .driver-popover-title { padding-right: 24px; }

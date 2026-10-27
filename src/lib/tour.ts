@@ -125,26 +125,20 @@ export async function startTour(opts: { beforeStart?: () => Promise<void> | void
       },
     });
 
-    // Keep Tab inside the popover while the tour is open.
+    // Keep Tab inside the popover while the tour is open. driver.js has its own Tab handler on window, which
+    // would also move focus after ours and skip the close button, so this one handles every Tab itself and
+    // stops the event here. Order is the popover's DOM order: close, Skip, Back, Next.
     function trap(event: KeyboardEvent) {
       if (event.key !== "Tab") return;
       const box = document.querySelector<HTMLElement>(".driver-popover.ribbon-tour");
       if (!box) return;
       const items = Array.from(box.querySelectorAll<HTMLElement>("button:not([disabled])")).filter((n) => n.offsetParent !== null);
       if (items.length === 0) return;
-      const first = items[0]!;
-      const last = items[items.length - 1]!;
-      const active = document.activeElement;
-      if (!box.contains(active)) {
-        event.preventDefault();
-        first.focus();
-      } else if (event.shiftKey && active === first) {
-        event.preventDefault();
-        last.focus();
-      } else if (!event.shiftKey && active === last) {
-        event.preventDefault();
-        first.focus();
-      }
+      event.preventDefault();
+      event.stopPropagation();
+      const at = items.indexOf(document.activeElement as HTMLElement);
+      const next = at < 0 ? (event.shiftKey ? items.length - 1 : 0) : (at + (event.shiftKey ? -1 : 1) + items.length) % items.length;
+      items[next]!.focus();
     }
     document.addEventListener("keydown", trap, true);
 

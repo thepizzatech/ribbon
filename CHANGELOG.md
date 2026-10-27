@@ -4,6 +4,34 @@ All notable changes to Ribbon are recorded here. The format follows [Keep a Chan
 
 ## [Unreleased]
 
+Development build `0.4.0-dev.2`: fixes from a UI and accessibility audit of the Calendar and the app shell. No data or settings changes.
+
+### Fixed
+
+- **Focus returns to where you were after closing a sheet** (event details, Add event, gift and person sheets). It used to fall to the top of the page, which lost keyboard and screen-reader users their place.
+- **Coming up and "Next birthday" are in date order.** They followed the order people were added, so the KPI could name a birthday weeks away while one was due tomorrow.
+- **Long text no longer breaks layouts.** A pasted URL in an event note, a long location, or a long calendar or person name wraps inside the event sheet instead of scrolling it sideways. In Settings → Calendars the "It's …", "Add … as a new person" and "Ignore" buttons wrap instead of pushing the page wider than the screen.
+- **Overlapping events stay readable.** Events at the same time are never narrower than 60 px; a crowded day scrolls sideways inside its column. The all-day row of a week shows three chips per day plus "+N more" (opens the day) instead of growing without limit.
+- **Valid ARIA on the calendar.** The week and month grids no longer claim `role="grid"` without rows, cells or arrow keys (each day is a labelled group instead). The phone day strip is a set of pressed/unpressed buttons, "How to connect" in Settings is a real tab set (arrow keys, Home/End, one tab stop, a tab panel), and the colour swatches are a real radio group (one tab stop, arrow keys). The tour's × button can be reached with Tab again (driver.js and Ribbon both handled Tab and cancelled each other out).
+- **People filter shows everyone**, not the first eight. Initials are emoji-safe ("🦊 Fox" is 🦊F, not a broken character).
+- **Contrast.** Event times use the full tone colour (no 80% opacity), days outside the month are tinted instead of faded, and the subtle grey is slightly darker. All now meet 4.5:1.
+- **Plurals and "ago"** go through one helper: "1 event", "1 year", "yesterday", "2 days ago" instead of "1 events", "1 years", "1 days ago". The notification badge reads "3 things need you".
+- Errors are red instead of the body colour; the hidden file picker is not a Tab stop; "Sync now" has an accessible name that starts with its visible text; switch rows toggle from anywhere on the row.
+- **The page rolls over at midnight.** A calendar left open overnight updates "today" and the now-line without a reload.
+
+### Changed
+
+- **Phones.**
+    - Form controls are 16 px on touch screens (iOS no longer zooms the page when you focus the Year, budget, person-link or feed-address fields).
+    - Calendar controls (view buttons, avatar and source filters, arrows, Today, + Event, "+N more", swatches, day strip) have 44 px touch targets without changing how they look. A month cell on a phone is one big tap target.
+    - Hover styles apply only on devices that can hover, so a tap no longer leaves buttons looking hovered. Chart tooltips keep working on tap.
+    - No grey tap flash, no double-tap zoom delay on controls, a shared pressed state, and sheets no longer scroll the page behind them.
+    - The browser bar colour matches the page in light and dark, and follows the theme toggle; the app manifest agrees.
+    - The title field of Add event is not auto-focused on touch screens, so the keyboard does not cover the sheet.
+- **Calendar load animation** plays once per browser session, over about a quarter of a second (items rise in 180 ms, staggered across 100 ms), and numbers count for 0.4 s instead of 0.8 s. Later visits and later week or month changes show content straight away. Still off with `prefers-reduced-motion`.
+
+## [0.4.0-dev.1] - 2026-10-25
+
 Development build `0.4.0-dev.1`: the Calendar.
 
 ### Added

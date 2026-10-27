@@ -5,8 +5,11 @@ import { MonthGrid, TimeGrid } from "@/components/calendar/grid";
 import { EventDetail, ManualForm, SidePanel, SOURCE_LABEL } from "@/components/calendar/side";
 import { CountUp } from "@/components/motion";
 import { useIntro } from "@/lib/motion";
-import { addDays, daysOf, rangeLabel, rangeOf, step, titleOf, todayLocal, type View } from "@/lib/calendar/dates";
+import { addDays, daysOf, rangeLabel, rangeOf, step, titleOf, type View } from "@/lib/calendar/dates";
+import { sortedByStart } from "@/lib/calendar/sort";
+import { useNow } from "@/lib/calendar/use-now";
 import type { CalEvent } from "@/lib/calendar/types";
+import { initialsOf, plural } from "@/lib/format";
 import { xapi } from "@/lib/gifts/api-extra";
 import { useLedger } from "@/lib/gifts/store";
 import { cn } from "@/lib/utils";
@@ -17,13 +20,8 @@ const VIEWS: { id: View; label: string }[] = [
   { id: "month", label: "Month" },
 ];
 const AVATAR_TONES = ["purple", "pink", "red", "blue", "green", "amber"] as const;
-const initials = (name: string) => {
-  const p = name.trim().split(/\s+/).filter(Boolean);
-  return ((p[0]?.[0] ?? "?") + (p.length > 1 ? (p[p.length - 1]?.[0] ?? "") : "")).toUpperCase();
-};
-
 export function CalendarPage() {
-  const today = todayLocal();
+  const { now, today } = useNow();
   const people = useLedger((s) => s.people);
   const [view, setView] = useState<View>("week");
   const [anchor, setAnchor] = useState(today);
@@ -41,7 +39,7 @@ export function CalendarPage() {
   });
   const summary = useQuery({ queryKey: ["calendar", "summary", today], queryFn: () => xapi.calSummary(today) });
   const soon = useQuery({ queryKey: ["calendar", "events", today, addDays(today, 45)], queryFn: () => xapi.calEvents(today, addDays(today, 45), today) });
-  const intro = useIntro(events.isSuccess);
+  const intro = useIntro(events.isSuccess, "calendar");
 
   const all = useMemo(() => events.data?.events ?? [], [events.data]);
   const sources = useMemo(() => {
@@ -75,18 +73,24 @@ export function CalendarPage() {
   const weekHasPicked = days.includes(picked) ? picked : days.includes(today) ? today : (days[0] ?? today);
   const inRange = shown.filter((e) => daysOf(e, range.from, range.to).length > 0).length;
 
-  const filterPeople = people.filter((p) => p.circle === "household").concat(people.filter((p) => p.circle !== "household")).slice(0, 8);
+  const filterPeople = people.filter((p) => p.circle === "household").concat(people.filter((p) => p.circle !== "household"));
   const go = (dir: 1 | -1) => {
     const next = step(view, anchor, dir);
     setAnchor(next);
     setPicked(next);
+  };
+  const openDay = (d: string) => {
+    setView("day");
+    setAnchor(d);
+    setPicked(d);
   };
   const toToday = () => {
     setAnchor(today);
     setPicked(today);
   };
   const s = summary.data;
-  const nb = (soon.data?.events ?? []).find((e) => e.source === "birthday");
+  const upcoming = useMemo(() => sortedByStart(soon.data?.events ?? []), [soon.data]);
+  const nb = upcoming.find((e) => e.source === "birthday");
   const nextBirthday = nb ? `Next: ${nb.title.replace(/[’']s birthday$/i, "")} · ${new Date(nb.start.slice(0, 10) + "T12:00").toLocaleDateString(undefined, { month: "short", day: "numeric" })}` : s ? "None coming up" : " ";
 
   return (
@@ -133,10 +137,10 @@ export function CalendarPage() {
                 className={cn("cal-av", `tone-${AVATAR_TONES[i % AVATAR_TONES.length]}`, on && "is-on")}
                 aria-pressed={on}
                 title={p.name}
-                aria-label={p.name}
                 onClick={() => setWho((cur) => (cur.has(p.id) ? new Set([...cur].filter((x) => x !== p.id)) : new Set([...cur, p.id])))}
               >
-                {initials(p.name)}
+                <span aria-hidden="true">{initialsOf(p.name)}</span>
+                <span className="sr-only">{p.name}</span>
               </button>
             );
           })}
@@ -158,9 +162,9 @@ export function CalendarPage() {
       <div className="cal-layout">
         <div className="cal-main">
           <div className="cal-kpis" data-tour="cal-kpis">
-            <Kpi label="Events this week" value={s?.eventsThisWeek ?? 0} note={s ? (s.todayCount > 0 ? `${s.todayCount} today` : "Nothing today") : " "} />
-            <Kpi label="Birthdays in 30 days" value={s?.birthdaysIn30 ?? 0} note={nextBirthday} />
-            <Kpi label="Gifts still needed" value={s?.giftsNeeded ?? 0} note={s && s.giftEventsNeeded > 0 ? `for ${s.giftEventsNeeded} ${s.giftEventsNeeded === 1 ? "event" : "events"}` : "All covered"} />
+            <Kpi animate={intro} label="Events this week" value={s?.eventsThisWeek ?? 0} note={s ? (s.todayCount > 0 ? `${s.todayCount} today` : "Nothing today") : " "} />
+            <Kpi animate={intro} label="Birthdays in 30 days" value={s?.birthdaysIn30 ?? 0} note={nextBirthday} />
+            <Kpi animate={intro} label="Gifts still needed" value={s?.giftsNeeded ?? 0} note={s && s.giftEventsNeeded > 0 ? `for ${plural(s.giftEventsNeeded, "event")}` : "All covered"} />
           </div>
 
           <section className="cal-card" aria-label="Calendar" aria-busy={events.isFetching}>
@@ -174,20 +178,16 @@ export function CalendarPage() {
                 indexOf={order}
                 total={shown.length}
                 onOpen={setDetail}
-                onPickDay={(d) => {
-                  setView("day");
-                  setAnchor(d);
-                  setPicked(d);
-                }}
+                onPickDay={openDay}
               />
             ) : (
-              <TimeGrid days={days} events={shown} today={today} picked={weekHasPicked} onPick={setPicked} onOpen={setDetail} intro={intro} indexOf={order} total={shown.length} />
+              <TimeGrid days={days} events={shown} today={today} now={now} picked={weekHasPicked} onPick={setPicked} onOpenDay={openDay} onOpen={setDetail} intro={intro} indexOf={order} total={shown.length} />
             )}
             {events.isError ? <p className="cal-note">Couldn’t load events. Try again in a moment.</p> : null}
             {events.isSuccess && inRange === 0 ? <p className="cal-note">Nothing here{who.size || hidden.size ? " with these filters" : ""}. Add an event, or connect a calendar in Settings.</p> : null}
           </section>
         </div>
-        <SidePanel upcoming={soon.data?.events ?? []} today={today} onOpen={setDetail} onAddEvent={() => setForm({ open: true, editing: null })} intro={intro} />
+        <SidePanel upcoming={upcoming} today={today} onOpen={setDetail} onAddEvent={() => setForm({ open: true, editing: null })} intro={intro} />
       </div>
 
       <EventDetail
@@ -203,12 +203,12 @@ export function CalendarPage() {
   );
 }
 
-function Kpi({ label, value, note }: { label: string; value: number; note: string }) {
+function Kpi({ label, value, note, animate }: { label: string; value: number; note: string; animate: boolean }) {
   return (
     <div className="cal-kpi">
       <p className="cal-kpi-label">{label}</p>
       <p className="cal-kpi-num">
-        <CountUp value={value} />
+        <CountUp value={value} duration={400} animate={animate} />
       </p>
       <p className="cal-kpi-note">{note}</p>
     </div>

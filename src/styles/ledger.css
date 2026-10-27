@@ -67,8 +67,10 @@
   text-align: left;
 }
 
-.ledger-table th button:hover {
-  color: var(--color-foreground);
+@media (hover: hover) and (pointer: fine) {
+  .ledger-table th button:hover {
+    color: var(--color-foreground);
+  }
 }
 
 .ledger-table th[aria-sort] button {
@@ -90,8 +92,10 @@
   transition: background var(--motion-quick);
 }
 
-.ledger-table tbody tr:hover {
-  background: var(--color-background);
+@media (hover: hover) and (pointer: fine) {
+  .ledger-table tbody tr:hover {
+    background: var(--color-background);
+  }
 }
 
 .ledger-table .c-amount,

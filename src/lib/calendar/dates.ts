@@ -1,8 +1,9 @@
 // Date helpers for the calendar views. Days are "YYYY-MM-DD" strings in the browser's own time zone.
 import { addDays, daysBetween, todayLocal } from "@/lib/gifts/upcoming";
 import type { CalEvent } from "./types";
+import { parseWhen } from "./when";
 
-export { addDays, daysBetween, todayLocal };
+export { addDays, daysBetween, todayLocal, parseWhen };
 
 const pad = (n: number) => String(n).padStart(2, "0");
 export const toIso = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
@@ -59,13 +60,6 @@ export function titleOf(view: View, anchor: string, today: string): string {
   if (week === weekStart(addDays(today, 7))) return "Next week";
   if (week === weekStart(addDays(today, -7))) return "Last week";
   return `Week of ${fmt(week, { month: "short", day: "numeric" })}`;
-}
-
-/** An instant for the event: "...Z" is absolute, anything else is the wall-clock time as written. */
-export function parseWhen(value: string): Date {
-  if (/(Z|[+-]\d{2}:?\d{2})$/.test(value)) return new Date(value);
-  const m = /^(\d{4})-(\d{2})-(\d{2})(?:T(\d{2}):(\d{2})(?::(\d{2}))?)?/.exec(value)!;
-  return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]), Number(m[4] ?? 0), Number(m[5] ?? 0), Number(m[6] ?? 0));
 }
 
 const clock = (d: Date) => d.toLocaleTimeString(undefined, { hour: "numeric", minute: d.getMinutes() ? "2-digit" : undefined }).replace(" ", "\u202f");

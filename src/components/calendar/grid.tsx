@@ -1,11 +1,14 @@
 import { Cake, Gift as GiftIcon, Heart, PartyPopper, Shuffle } from "lucide-react";
 import { useMemo } from "react";
 import { addDays, daysOf, fromIso, hourLabel, parseWhen, placeDay, timeLabel, type View } from "@/lib/calendar/dates";
+import { firstGrapheme, plural } from "@/lib/format";
 import { stagger } from "@/lib/motion";
 import type { CalEvent } from "@/lib/calendar/types";
 import { cn } from "@/lib/utils";
 
 const HOUR = 52; // px per hour
+const MIN_EVENT_W = 60; // px: overlapping events never get narrower than this; the day scrolls sideways instead
+const ALL_DAY_CAP = 3; // all-day chips per day before "+N more"
 const SOURCE_ICON = { birthday: Cake, anniversary: Heart, occasion: PartyPopper, gift: GiftIcon, santa: Shuffle } as const;
 
 function EventIcon({ event }: { event: CalEvent }) {
@@ -19,12 +22,15 @@ function describe(e: CalEvent) {
 
 type Common = { onOpen: (e: CalEvent) => void; intro: boolean };
 
+const rise = (intro: boolean) => (intro ? "rise" : undefined);
+const longDay = (iso: string) => fromIso(iso).toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" });
+
 function dayHead(day: string, today: string) {
   const d = fromIso(day);
   return { weekday: d.toLocaleDateString(undefined, { weekday: "short" }), num: d.getDate(), isToday: day === today };
 }
 
-export function TimeGrid({ days, events, today, picked, onPick, onOpen, intro, indexOf, total }: Common & { days: string[]; events: CalEvent[]; today: string; picked: string; onPick: (d: string) => void; indexOf: Map<string, number>; total: number }) {
+export function TimeGrid({ days, events, today, now, picked, onPick, onOpenDay, onOpen, intro, indexOf, total }: Common & { days: string[]; events: CalEvent[]; today: string; now: Date; picked: string; onPick: (d: string) => void; onOpenDay: (d: string) => void; indexOf: Map<string, number>; total: number }) {
   const byDay = useMemo(() => {
     const map = new Map<string, CalEvent[]>(days.map((d) => [d, []]));
     for (const e of events) for (const d of daysOf(e, days[0]!, days[days.length - 1]!)) map.get(d)?.push(e);
@@ -42,46 +48,48 @@ export function TimeGrid({ days, events, today, picked, onPick, onOpen, intro, i
     }
   }
   const hours = Array.from({ length: last - first }, (_, i) => first + i);
-  const now = new Date();
   const nowMin = now.getHours() * 60 + now.getMinutes();
   const pickedIndex = Math.max(0, days.indexOf(picked));
 
   return (
-    <div className="wk" data-days={days.length} data-pick={pickedIndex} role="grid" aria-label="Calendar">
-      <div className="wk-strip" role="tablist" aria-label="Day">
+    <div className="wk" data-days={days.length} data-pick={pickedIndex} role="group" aria-label="Calendar">
+      <div className="wk-strip" role="group" aria-label="Day">
         {days.map((d) => {
           const h = dayHead(d, today);
           return (
-            <button key={d} type="button" role="tab" aria-selected={d === picked} className={cn("wk-pill", d === picked && "is-on", h.isToday && "is-today")} onClick={() => onPick(d)}>
-              <span>{h.weekday.slice(0, 1)}</span>
+            <button key={d} type="button" aria-pressed={d === picked} aria-current={h.isToday ? "date" : undefined} className={cn("wk-pill", d === picked && "is-on", h.isToday && "is-today")} onClick={() => onPick(d)}>
+              <span aria-hidden="true">{firstGrapheme(h.weekday)}</span>
+              <span className="sr-only">{h.weekday}</span>
               <b>{h.num}</b>
             </button>
           );
         })}
       </div>
-      <div className="wk-head" role="row">
+      <div className="wk-head" aria-hidden="true">
         <span className="wk-gutter" />
         {days.map((d, i) => {
           const h = dayHead(d, today);
           return (
-            <div key={d} role="columnheader" className={cn("wk-day", h.isToday && "is-today")} data-i={i}>
+            <div key={d} className={cn("wk-day", h.isToday && "is-today")} data-i={i}>
               <span>{h.weekday}</span>
               <b>{h.num}</b>
             </div>
           );
         })}
       </div>
-      <div className="wk-allday" role="row">
+      <div className="wk-allday">
         <span className="wk-gutter">all-day</span>
-        {days.map((d, i) => (
-          <div key={d} className="wk-allcell" role="gridcell" data-i={i}>
-            {(byDay.get(d) ?? [])
-              .filter((e) => e.allDay)
-              .map((e) => (
+        {days.map((d, i) => {
+          const allDay = (byDay.get(d) ?? []).filter((e) => e.allDay);
+          // one day is a full view: show everything there. A week caps the band so it can't push the hours off screen.
+          const shownAll = days.length > 1 ? allDay.slice(0, ALL_DAY_CAP) : allDay;
+          return (
+            <div key={d} className="wk-allcell" data-i={i}>
+              {shownAll.map((e) => (
                 <button
                   key={`${e.id}-${d}`}
                   type="button"
-                  className={cn("ev ev-all rise", `tone-${e.tone}`)}
+                  className={cn("ev ev-all", rise(intro), `tone-${e.tone}`)}
                   style={{ animationDelay: `${stagger(indexOf.get(e.id) ?? 0, total, intro)}ms` }}
                   onClick={() => onOpen(e)}
                   aria-label={describe(e)}
@@ -90,10 +98,16 @@ export function TimeGrid({ days, events, today, picked, onPick, onOpen, intro, i
                   <span className="truncate">{e.title}</span>
                 </button>
               ))}
-          </div>
-        ))}
+              {allDay.length > shownAll.length ? (
+                <button type="button" className="mo-more" onClick={() => onOpenDay(d)} aria-label={`+${allDay.length - shownAll.length} more, open ${longDay(d)}`}>
+                  +{allDay.length - shownAll.length} more
+                </button>
+              ) : null}
+            </div>
+          );
+        })}
       </div>
-      <div className="wk-body" role="row">
+      <div className="wk-body">
         <div className="wk-hours" aria-hidden="true">
           {hours.map((h) => (
             <span key={h} style={{ height: HOUR }}>
@@ -101,36 +115,42 @@ export function TimeGrid({ days, events, today, picked, onPick, onOpen, intro, i
             </span>
           ))}
         </div>
-        {days.map((d, i) => (
-          <div key={d} className={cn("wk-col", d === today && "is-today")} role="gridcell" data-i={i} style={{ height: hours.length * HOUR }}>
-            {d === today && nowMin >= first * 60 && nowMin <= last * 60 ? <span className="wk-now" style={{ top: ((nowMin - first * 60) / 60) * HOUR }} aria-hidden="true" /> : null}
-            {(placed.get(d) ?? []).map((p) => {
-              const short = p.height < 44;
-              return (
-                <button
-                  key={`${p.event.id}-${d}`}
-                  type="button"
-                  className={cn("ev rise", `tone-${p.event.tone}`, short && "is-short")}
-                  style={{
-                    top: ((p.top - first * 60) / 60) * HOUR + 1,
-                    height: (p.height / 60) * HOUR - 2,
-                    left: `calc(${(p.col / p.cols) * 100}% + 2px)`,
-                    width: `calc(${100 / p.cols}% - 4px)`,
-                    animationDelay: `${stagger(indexOf.get(p.event.id) ?? 0, total, intro)}ms`,
-                  }}
-                  onClick={() => onOpen(p.event)}
-                  aria-label={describe(p.event)}
-                >
-                  <span className="ev-title">
-                    <EventIcon event={p.event} />
-                    <span className="truncate">{p.event.title}</span>
-                  </span>
-                  {!short ? <span className="ev-time">{timeLabel(p.event)}</span> : null}
-                </button>
-              );
-            })}
-          </div>
-        ))}
+        {days.map((d, i) => {
+          const list = placed.get(d) ?? [];
+          const widest = Math.max(1, ...list.map((p) => p.cols));
+          return (
+            <div key={d} className={cn("wk-col", d === today && "is-today")} role="group" aria-label={longDay(d)} data-i={i} style={{ height: hours.length * HOUR }}>
+              <div className="wk-lane" style={{ minWidth: widest > 1 ? widest * MIN_EVENT_W : undefined }}>
+                {d === today && nowMin >= first * 60 && nowMin <= last * 60 ? <span className="wk-now" style={{ top: ((nowMin - first * 60) / 60) * HOUR }} aria-hidden="true" /> : null}
+                {list.map((p) => {
+                  const short = p.height < 44;
+                  return (
+                    <button
+                      key={`${p.event.id}-${d}`}
+                      type="button"
+                      className={cn("ev", rise(intro), `tone-${p.event.tone}`, short && "is-short")}
+                      style={{
+                        top: ((p.top - first * 60) / 60) * HOUR + 1,
+                        height: (p.height / 60) * HOUR - 2,
+                        left: `calc(${(p.col / p.cols) * 100}% + 2px)`,
+                        width: `calc(${100 / p.cols}% - 4px)`,
+                        animationDelay: `${stagger(indexOf.get(p.event.id) ?? 0, total, intro)}ms`,
+                      }}
+                      onClick={() => onOpen(p.event)}
+                      aria-label={describe(p.event)}
+                    >
+                      <span className="ev-title">
+                        <EventIcon event={p.event} />
+                        <span className="truncate">{p.event.title}</span>
+                      </span>
+                      {!short ? <span className="ev-time">{timeLabel(p.event)}</span> : null}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })}
       </div>
     </div>
   );
@@ -147,9 +167,9 @@ export function MonthGrid({ from, anchor, events, today, onOpen, onPickDay, intr
   }, [from, events]);
   const month = anchor.slice(0, 7);
   return (
-    <div className="mo" role="grid" aria-label="Month">
+    <div className="mo" role="group" aria-label="Month">
       {days.slice(0, 7).map((d) => (
-        <div key={d} className="mo-dow" role="columnheader">
+        <div key={d} className="mo-dow" aria-hidden="true">
           {fromIso(d).toLocaleDateString(undefined, { weekday: "short" })}
         </div>
       ))}
@@ -157,8 +177,8 @@ export function MonthGrid({ from, anchor, events, today, onOpen, onPickDay, intr
         const list = byDay.get(d) ?? [];
         const shown = list.slice(0, 3);
         return (
-          <div key={d} role="gridcell" className={cn("mo-cell", d.slice(0, 7) !== month && "is-out", d === today && "is-today")}>
-            <button type="button" className="mo-num" onClick={() => onPickDay(d)} aria-label={`${fromIso(d).toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" })}, ${list.length} events`}>
+          <div key={d} className={cn("mo-cell", d.slice(0, 7) !== month && "is-out", d === today && "is-today")}>
+            <button type="button" className="mo-num" onClick={() => onPickDay(d)} aria-label={`${longDay(d)}, ${plural(list.length, "event")}`}>
               {fromIso(d).getDate()}
             </button>
             <div className="mo-list">
@@ -166,7 +186,7 @@ export function MonthGrid({ from, anchor, events, today, onOpen, onPickDay, intr
                 <button
                   key={`${e.id}-${d}`}
                   type="button"
-                  className={cn("ev ev-mo rise", `tone-${e.tone}`)}
+                  className={cn("ev ev-mo", rise(intro), `tone-${e.tone}`)}
                   style={{ animationDelay: `${stagger(indexOf.get(e.id) ?? 0, total, intro)}ms` }}
                   onClick={() => onOpen(e)}
                   aria-label={describe(e)}

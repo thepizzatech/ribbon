@@ -54,8 +54,10 @@
   color: var(--color-primary-foreground);
 }
 
-.btn-primary:hover:not(:disabled) {
-  background: color-mix(in oklab, var(--color-primary) 86%, var(--color-card));
+@media (hover: hover) and (pointer: fine) {
+  .btn-primary:hover:not(:disabled) {
+    background: color-mix(in oklab, var(--color-primary) 86%, var(--color-card));
+  }
 }
 
 .btn-secondary {
@@ -64,8 +66,10 @@
   color: var(--color-foreground);
 }
 
-.btn-secondary:hover:not(:disabled) {
-  background: var(--color-secondary);
+@media (hover: hover) and (pointer: fine) {
+  .btn-secondary:hover:not(:disabled) {
+    background: var(--color-secondary);
+  }
 }
 
 .btn-ghost {
@@ -73,8 +77,10 @@
   color: var(--color-foreground);
 }
 
-.btn-ghost:hover:not(:disabled) {
-  background: var(--color-secondary);
+@media (hover: hover) and (pointer: fine) {
+  .btn-ghost:hover:not(:disabled) {
+    background: var(--color-secondary);
+  }
 }
 
 .btn-danger {
@@ -86,8 +92,10 @@ html[data-theme="dark"] .btn-danger {
   color: #f87171;
 }
 
-.btn-danger:hover:not(:disabled) {
-  background: var(--tone-rose-bg);
+@media (hover: hover) and (pointer: fine) {
+  .btn-danger:hover:not(:disabled) {
+    background: var(--tone-rose-bg);
+  }
 }
 
 .btn-block {
@@ -125,8 +133,10 @@ html[data-theme="dark"] .btn-danger {
   color: var(--color-foreground);
 }
 
-.icon-btn:hover {
-  background: var(--color-secondary);
+@media (hover: hover) and (pointer: fine) {
+  .icon-btn:hover {
+    background: var(--color-secondary);
+  }
 }
 
 .icon-btn.is-bordered {
@@ -291,8 +301,10 @@ textarea.field {
   font-weight: 500;
 }
 
-.chip:hover:not(:disabled) {
-  background: var(--color-secondary);
+@media (hover: hover) and (pointer: fine) {
+  .chip:hover:not(:disabled) {
+    background: var(--color-secondary);
+  }
 }
 
 .chip.is-on {
@@ -312,9 +324,11 @@ textarea.field {
   text-decoration: none;
 }
 
-.text-link:hover {
-  color: var(--color-foreground);
-  text-decoration: underline;
+@media (hover: hover) and (pointer: fine) {
+  .text-link:hover {
+    color: var(--color-foreground);
+    text-decoration: underline;
+  }
 }
 
 /* Delta + status pills */

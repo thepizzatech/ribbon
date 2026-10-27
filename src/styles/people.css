@@ -30,8 +30,10 @@
   transition: border-color var(--motion-quick), background var(--motion-quick);
 }
 
-.person-card:hover {
-  border-color: var(--color-subtle);
+@media (hover: hover) and (pointer: fine) {
+  .person-card:hover {
+    border-color: var(--color-subtle);
+  }
 }
 
 .person-card .meta {
@@ -82,8 +84,10 @@
   text-decoration: none;
 }
 
-.back-link:hover {
-  color: var(--color-foreground);
+@media (hover: hover) and (pointer: fine) {
+  .back-link:hover {
+    color: var(--color-foreground);
+  }
 }
 
 .person-head {
@@ -206,8 +210,10 @@
   text-align: left;
 }
 
-.t-btn:hover {
-  background: var(--color-background);
+@media (hover: hover) and (pointer: fine) {
+  .t-btn:hover {
+    background: var(--color-background);
+  }
 }
 
 .t-btn .t {

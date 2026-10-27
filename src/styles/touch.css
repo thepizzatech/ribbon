@@ -1,0 +1,172 @@
+/* Touch and small-screen hygiene. Loaded last so it wins over the component rules above it. */
+
+/* iOS paints a grey flash on every tappable; the :active states below replace it. */
+html {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* No double-tap-to-zoom delay on controls, and long-press doesn't select their labels. */
+button,
+a,
+select,
+summary,
+label,
+[role="button"],
+[role="tab"],
+[role="switch"],
+[role="radio"] {
+  touch-action: manipulation;
+}
+button,
+[role="tab"],
+[role="switch"],
+[role="radio"],
+.nav-link,
+.side-link,
+.tab {
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* One press state for the tappables that had none (the ones that already use .press keep theirs). */
+.nav-link,
+.side-link,
+.cal-seg button,
+.cal-av,
+.cal-src,
+.mo-num,
+.wk-pill,
+.tab,
+.chip,
+.segment button,
+.swatch,
+.cp-row,
+.icon-btn {
+  transition: transform 120ms var(--ease-out);
+}
+.nav-link:active,
+.side-link:active,
+.cal-seg button:active,
+.cal-av:active,
+.cal-src:active,
+.mo-num:active,
+.wk-pill:active,
+.tab:active,
+.chip:active,
+.segment button:active,
+.swatch:active,
+.cp-row:active,
+.icon-btn:active {
+  transform: scale(0.97);
+}
+/* .press already scales; ease it so it doesn't snap. Buttons (.btn) have their own transition list. */
+.press:not(.btn) {
+  transition: transform 120ms var(--ease-out);
+}
+
+/* Error text reads as an error, not as a normal sentence. */
+.form-error {
+  color: var(--tone-rose-fg);
+}
+
+/* Text typed or imported by people: long URLs and unbroken names wrap instead of widening the sheet. */
+.wrap-any {
+  overflow-wrap: anywhere;
+}
+.sheet-body {
+  overflow-x: hidden;
+  overscroll-behavior: contain;
+}
+
+/* A button built from data ("Add Bartholomew Fitzgerald-Montgomery as a new person") may wrap to a second line. */
+.btn.btn-wrap {
+  height: auto;
+  min-width: 0;
+  max-width: 100%;
+  padding-block: 6px;
+  text-align: left;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+/* Phones and tablets: form controls under 16px make iOS zoom the page when focused. */
+@media (pointer: coarse) {
+  input:not([type="checkbox"], [type="radio"], [type="range"], [type="file"]),
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
+}
+
+/* Touch targets: calendar controls keep their look but get a 44px hit area (an invisible ::before; later siblings win overlaps). */
+@media (pointer: coarse), (max-width: 767px) {
+  .cal-seg button,
+  .cal-av,
+  .cal-src,
+  .cal-round,
+  .cal-pill,
+  .cal-add,
+  .mo-more,
+  .swatch,
+  .wk-pill {
+    position: relative;
+  }
+  .cal-seg button::before,
+  .cal-av::before,
+  .cal-src::before,
+  .cal-round::before,
+  .cal-pill::before,
+  .cal-add::before,
+  .mo-more::before,
+  .swatch::before,
+  .wk-pill::before {
+    content: "";
+    position: absolute;
+    inset-block: min(0px, calc((100% - 44px) / 2));
+    inset-inline: min(0px, calc((100% - 44px) / 2));
+  }
+  .cal-tools {
+    gap: 12px 8px;
+  }
+  .cal-avatars {
+    gap: 16px 10px;
+  }
+  .cal-sources {
+    padding-block: 9px;
+  }
+  .swatches {
+    gap: 14px;
+  }
+  .driver-popover.ribbon-tour .driver-popover-close-btn {
+    width: 44px;
+    height: 44px;
+    top: 4px;
+    right: 4px;
+  }
+}
+
+/* Phones: all the people in one scrolling row (not wrapped rows whose hit areas overlap). */
+@media (max-width: 767px) {
+  .cal-avatars {
+    flex-wrap: nowrap;
+    gap: 10px;
+    overflow-x: auto;
+    padding: 8px 6px;
+    scrollbar-width: none;
+  }
+  .cal-av {
+    flex: none;
+  }
+  .cal-filters {
+    row-gap: 0;
+  }
+}
+
+/* A phone's month cell is one big button: the day number's hit area fills the whole cell. */
+@media (max-width: 767px) {
+  .mo-num::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+  }
+}

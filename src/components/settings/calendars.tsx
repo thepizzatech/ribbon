@@ -1,8 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSearch } from "@tanstack/react-router";
 import { CalendarDays, Check, FileUp, FlaskConical, Link2, RefreshCw, Trash2 } from "lucide-react";
-import { useRef, useState } from "react";
+import { useRef, useState, type KeyboardEvent } from "react";
 import { Button, Field, Switch, TextInput } from "@/components/ui";
+import { plural, relativeAgo } from "@/lib/format";
 import { ApiError } from "@/lib/gifts/api";
 import { xapi } from "@/lib/gifts/api-extra";
 import type { Connection, DavCalendar, ReviewItem, Tone } from "@/lib/calendar/types";
@@ -27,16 +28,35 @@ function ago(iso: string | null): string {
   if (!iso) return "Not synced yet";
   const s = Math.max(0, Math.round((Date.now() - Date.parse(iso)) / 1000));
   if (s < 60) return "Synced just now";
-  if (s < 3600) return `Synced ${Math.round(s / 60)} min ago`;
-  if (s < 86400) return `Synced ${Math.round(s / 3600)} h ago`;
-  return `Synced ${Math.round(s / 86400)} days ago`;
+  return `Synced ${relativeAgo(s)}`;
 }
 
 function ColorPicker({ value, onChange, label }: { value: Tone; onChange: (c: Tone) => void; label: string }) {
+  // A radio group: one tab stop (the chosen colour), arrow keys move and choose.
+  const onKey = (event: KeyboardEvent<HTMLButtonElement>, index: number) => {
+    const move = event.key === "ArrowRight" || event.key === "ArrowDown" ? 1 : event.key === "ArrowLeft" || event.key === "ArrowUp" ? -1 : 0;
+    if (!move) return;
+    event.preventDefault();
+    const next = COLORS[(index + move + COLORS.length) % COLORS.length]!;
+    onChange(next);
+    const group = event.currentTarget.parentElement;
+    requestAnimationFrame(() => group?.querySelector<HTMLElement>(`[data-color="${next}"]`)?.focus());
+  };
   return (
     <div className="swatches" role="radiogroup" aria-label={label}>
-      {COLORS.map((c) => (
-        <button key={c} type="button" role="radio" aria-checked={value === c} aria-label={c} className={cn("swatch", `tone-${c}`, value === c && "is-on")} onClick={() => onChange(c)} />
+      {COLORS.map((c, i) => (
+        <button
+          key={c}
+          type="button"
+          role="radio"
+          data-color={c}
+          aria-checked={value === c}
+          aria-label={c}
+          tabIndex={value === c ? 0 : -1}
+          className={cn("swatch", `tone-${c}`, value === c && "is-on")}
+          onClick={() => onChange(c)}
+          onKeyDown={(e) => onKey(e, i)}
+        />
       ))}
     </div>
   );
@@ -92,13 +112,13 @@ function ConnectionRow({ c }: { c: Connection }) {
             {c.calendars.length > 0 ? ` · ${c.calendars.join(", ")}` : ""}
           </p>
           <p className={cn("conn-sub", problem && "conn-bad")} role={problem ? "alert" : undefined}>
-            {problem ? (c.lastError ?? "This calendar couldn’t be refreshed.") : `${c.syncs ? ago(c.lastSyncedAt) : "Imported from a file"} · ${c.eventCount} ${c.eventCount === 1 ? "event" : "events"}`}
+            {problem ? (c.lastError ?? "This calendar couldn’t be refreshed.") : `${c.syncs ? ago(c.lastSyncedAt) : "Imported from a file"} · ${plural(c.eventCount, "event")}`}
             {!problem && c.lastError ? ` · ${c.lastError}` : ""}
           </p>
         </div>
         <div className="conn-actions">
           {c.syncs ? (
-            <Button variant="secondary" small onClick={() => sync.mutate()} disabled={sync.isPending} aria-label={`Sync ${c.name} now`}>
+            <Button variant="secondary" small onClick={() => sync.mutate()} disabled={sync.isPending} aria-label={`Sync now: ${c.name}`}>
               <RefreshCw size={14} strokeWidth={1.5} className={sync.isPending ? "spin" : ""} />
               Sync now
             </Button>
@@ -197,15 +217,15 @@ function Reviews() {
               ) : (
                 <div className="mt-2 flex flex-wrap gap-2">
                   {i.matches.map((m) => (
-                    <Button key={m.id} small variant="secondary" onClick={() => decide.mutate({ connectionId: i.connectionId, uid: i.uid, action: "match", personId: m.id })}>
+                    <Button key={m.id} small variant="secondary" className="btn-wrap" onClick={() => decide.mutate({ connectionId: i.connectionId, uid: i.uid, action: "match", personId: m.id })}>
                       <Check size={13} strokeWidth={2} />
                       It’s {m.name}
                     </Button>
                   ))}
-                  <Button small variant={i.matches.length ? "ghost" : "secondary"} onClick={() => decide.mutate({ connectionId: i.connectionId, uid: i.uid, action: "create", name: i.name })}>
+                  <Button small variant={i.matches.length ? "ghost" : "secondary"} className="btn-wrap" onClick={() => decide.mutate({ connectionId: i.connectionId, uid: i.uid, action: "create", name: i.name })}>
                     Add {i.name} as a new person
                   </Button>
-                  <Button small variant="ghost" onClick={() => decide.mutate({ connectionId: i.connectionId, uid: i.uid, action: "ignore" })}>
+                  <Button small variant="ghost" className="btn-wrap" onClick={() => decide.mutate({ connectionId: i.connectionId, uid: i.uid, action: "ignore" })}>
                     Ignore
                   </Button>
                 </div>
@@ -244,13 +264,13 @@ function Connect({ providers }: { providers: { google: boolean } }) {
     toast(label);
   };
   const base = { name: name.trim() || undefined, color, shared };
-  const addUrl = useMutation({ mutationFn: () => xapi.addCalendarUrl({ url: url.trim(), ...base }), onSuccess: (d) => after(`${d.connection.name} connected · ${d.connection.eventCount} events`), onError: (e) => setError(msg(e, "Couldn’t add that calendar.")) });
+  const addUrl = useMutation({ mutationFn: () => xapi.addCalendarUrl({ url: url.trim(), ...base }), onSuccess: (d) => after(`${d.connection.name} connected · ${plural(d.connection.eventCount, "event")}`), onError: (e) => setError(msg(e, "Couldn’t add that calendar.")) });
   const upload = useMutation({
     mutationFn: async (f: File) => {
       if (f.size > 5 * 1024 * 1024) throw new Error("That file is bigger than 5 MB.");
       return xapi.uploadCalendar({ text: await f.text(), ...base, name: base.name ?? f.name.replace(/\.ics$/i, "") });
     },
-    onSuccess: (d) => after(`${d.connection.name} imported · ${d.connection.eventCount} events`),
+    onSuccess: (d) => after(`${d.connection.name} imported · ${plural(d.connection.eventCount, "event")}`),
     onError: (e) => setError(msg(e, "Couldn’t read that file.")),
   });
   const discover = useMutation({
@@ -264,7 +284,7 @@ function Connect({ providers }: { providers: { google: boolean } }) {
   });
   const addDav = useMutation({
     mutationFn: () => xapi.addCaldav({ ...dav, calendars: [...chosen], ...base }),
-    onSuccess: (d) => after(`${d.connection.name} connected · ${d.connection.eventCount} events`),
+    onSuccess: (d) => after(`${d.connection.name} connected · ${plural(d.connection.eventCount, "event")}`),
     onError: (e) => setError(msg(e, "Couldn’t connect.")),
   });
   const google = useMutation({
@@ -287,13 +307,34 @@ function Connect({ providers }: { providers: { google: boolean } }) {
         <p className="card-sub">Ribbon only reads your calendar. It never changes it, and your events are private to you unless you share them.</p>
       </div>
       <div className="segment is-small" role="tablist" aria-label="How to connect">
-        {MODES.map((m) => (
-          <button key={m.id} type="button" role="tab" aria-selected={mode === m.id} className={mode === m.id ? "is-on" : ""} onClick={() => { setMode(m.id); setError(""); }}>
+        {MODES.map((m, index) => (
+          <button
+            key={m.id}
+            id={`connect-tab-${m.id}`}
+            type="button"
+            role="tab"
+            aria-selected={mode === m.id}
+            aria-controls="connect-panel"
+            tabIndex={mode === m.id ? 0 : -1}
+            className={mode === m.id ? "is-on" : ""}
+            onClick={() => { setMode(m.id); setError(""); }}
+            onKeyDown={(e) => {
+              const last = MODES.length - 1;
+              const to = e.key === "ArrowRight" ? (index + 1) % MODES.length : e.key === "ArrowLeft" ? (index + last) % MODES.length : e.key === "Home" ? 0 : e.key === "End" ? last : -1;
+              if (to < 0) return;
+              e.preventDefault();
+              const next = MODES[to]!;
+              setMode(next.id);
+              setError("");
+              requestAnimationFrame(() => document.getElementById(`connect-tab-${next.id}`)?.focus());
+            }}
+          >
             {m.label}
           </button>
         ))}
       </div>
 
+      <div id="connect-panel" role="tabpanel" aria-labelledby={`connect-tab-${mode}`}>
       <form
         className="stack"
         onSubmit={(e) => {
@@ -315,7 +356,7 @@ function Connect({ providers }: { providers: { google: boolean } }) {
         {mode === "file" ? (
           <div className="stack">
             <p className="text-sm text-muted">Export an .ics file from your calendar app and choose it here. A file is a one-time import: it doesn’t update itself.</p>
-            <input ref={file} type="file" accept=".ics,text/calendar" className="sr-only" aria-label="Choose an .ics file" onChange={(e) => { const f = e.target.files?.[0]; if (f) { setError(""); upload.mutate(f); } e.target.value = ""; }} />
+            <input ref={file} type="file" accept=".ics,text/calendar" className="sr-only" tabIndex={-1} aria-label="Choose an .ics file" onChange={(e) => { const f = e.target.files?.[0]; if (f) { setError(""); upload.mutate(f); } e.target.value = ""; }} />
             <div>
               <Button type="button" variant="secondary" pill onClick={() => file.current?.click()} disabled={upload.isPending}>
                 <FileUp size={15} strokeWidth={1.5} />
@@ -376,7 +417,7 @@ function Connect({ providers }: { providers: { google: boolean } }) {
           </div>
         ) : null}
         {error ? (
-          <p className="text-sm text-primary" role="alert">
+          <p className="form-error text-sm" role="alert">
             {error}
           </p>
         ) : null}
@@ -389,6 +430,7 @@ function Connect({ providers }: { providers: { google: boolean } }) {
           </div>
         ) : null}
       </form>
+      </div>
     </section>
   );
 }

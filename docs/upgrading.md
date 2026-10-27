@@ -11,7 +11,7 @@ docker compose up -d
 Your data volume is kept and **migrated in place** the first time the new version starts. Check the version afterwards in **Settings → About**, in the sidebar footer, or at `/api/health`:
 
 ```json
-{ "ok": true, "version": "0.4.0-dev.1", "commit": "a5c662f" }
+{ "ok": true, "version": "0.4.0-dev.2", "commit": "a5c662f" }
 ```
 
 ## Before you upgrade
@@ -40,6 +40,10 @@ Until the first release is cut, `RIBBON_TAG=latest` (the compose default) has no
 ### Coming from a version before accounts
 
 Older builds had a single shared passcode (`APP_PASSCODE`) and no sign-in. After updating, the first visit asks you to create the owner login. Nothing is wiped, and no Welcome setup is asked for, because your ledger already exists (installs that already have data count as set up). `APP_PASSCODE` no longer does anything and can be removed from `.env`.
+
+### Moving to 0.4.0-dev.2
+
+Nothing to do: UI and accessibility fixes only, no migration and no new settings.
 
 ### Moving to 0.4.0-dev.1
 

@@ -496,8 +496,10 @@ html[data-theme="dark"] .tip {
   text-decoration: none;
 }
 
-.insight-cta:hover {
-  background: #f3f4f6;
+@media (hover: hover) and (pointer: fine) {
+  .insight-cta:hover {
+    background: #f3f4f6;
+  }
 }
 
 .insight-step {
@@ -519,8 +521,10 @@ html[data-theme="dark"] .tip {
   color: #fff;
 }
 
-.insight-step button:hover {
-  background: rgb(255 255 255 / 0.18);
+@media (hover: hover) and (pointer: fine) {
+  .insight-step button:hover {
+    background: rgb(255 255 255 / 0.18);
+  }
 }
 
 .insight :focus-visible {

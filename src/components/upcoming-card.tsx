@@ -1,6 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import { Cake, CalendarDays, Check, Heart, PartyPopper } from "lucide-react";
 import { useMemo } from "react";
+import { plural } from "@/lib/format";
 import { useLedger } from "@/lib/gifts/store";
 import { daysLabel, upcoming, type Upcoming } from "@/lib/gifts/upcoming";
 import { useMyPersonId } from "@/lib/gifts/use-session";
@@ -23,7 +24,7 @@ function Row({ event }: { event: Upcoming }) {
       <span className="min-w-0">
         <span className="t">
           {event.title}
-          {event.turning ? <span className="text-muted font-normal"> · {event.kind === "birthday" ? `turns ${event.turning}` : `${event.turning} years`}</span> : null}
+          {event.turning ? <span className="text-muted font-normal"> · {event.kind === "birthday" ? `turns ${event.turning}` : plural(event.turning, "year")}</span> : null}
         </span>
         <span className="s">
           {when(event.date)} · {daysLabel(event.daysLeft)}

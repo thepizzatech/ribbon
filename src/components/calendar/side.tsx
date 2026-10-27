@@ -4,6 +4,7 @@ import { ArrowRight, Cake, CalendarDays, Gift as GiftIcon, Heart, MapPin, PartyP
 import { useEffect, useState } from "react";
 import { useOverlay } from "@/components/overlay";
 import { Button, Field, Sheet, Switch, TextArea, TextInput } from "@/components/ui";
+import { plural } from "@/lib/format";
 import { stagger } from "@/lib/motion";
 import { dateLabel, daysBetween, fromIso, timeLabel } from "@/lib/calendar/dates";
 import type { CalEvent, ManualInput } from "@/lib/calendar/types";
@@ -15,6 +16,9 @@ import { cn } from "@/lib/utils";
 
 const ICON = { birthday: Cake, anniversary: Heart, occasion: PartyPopper, gift: GiftIcon, santa: Shuffle, manual: CalendarDays, external: CalendarDays } as const;
 export const SOURCE_LABEL = { birthday: "Birthday", anniversary: "Anniversary", occasion: "Occasion", gift: "Gift deadline", santa: "Secret Santa", manual: "Your event", external: "Imported" } as const;
+
+// On a phone, focusing the title on open raises the keyboard over half the sheet.
+const isTouch = () => typeof window !== "undefined" && window.matchMedia("(pointer: coarse)").matches;
 
 const short = (iso: string) => fromIso(iso).toLocaleDateString(undefined, { month: "short", day: "numeric" });
 
@@ -30,7 +34,7 @@ export function SidePanel({ upcoming, today, onOpen, onAddEvent, intro }: { upco
     const i = n++;
     const day = e.start.slice(0, 10);
     return (
-      <li key={e.id} className="rise" style={{ animationDelay: `${stagger(i, Math.max(items, 2), intro)}ms` }}>
+      <li key={e.id} className={intro ? "rise" : undefined} style={{ animationDelay: `${stagger(i, Math.max(items, 2), intro)}ms` }}>
         <button type="button" className="cp-row" onClick={() => onOpen(e)}>
           <span className={cn("cp-chip", `tone-${e.tone}`)}>
             <Icon size={14} strokeWidth={1.6} aria-hidden="true" />
@@ -38,7 +42,7 @@ export function SidePanel({ upcoming, today, onOpen, onAddEvent, intro }: { upco
           <span className="min-w-0 flex-1">
             <span className="cp-t">
               {e.title}
-              {e.turning ? <span className="cp-sub"> · {e.source === "birthday" ? `turns ${e.turning}` : `${e.turning} years`}</span> : null}
+              {e.turning ? <span className="cp-sub"> · {e.source === "birthday" ? `turns ${e.turning}` : plural(e.turning, "year")}</span> : null}
             </span>
             <span className="cp-s">
               {short(day)} · {daysLabel(daysBetween(today, day))}
@@ -114,31 +118,31 @@ export function EventDetail({ event, onClose, onEdit }: { event: CalEvent | null
             <Icon size={14} strokeWidth={1.6} aria-hidden="true" />
           </span>
           <span>{SOURCE_LABEL[event.source]}</span>
-          {event.connectionName ? <span className="text-muted">· {event.connectionName}</span> : null}
-          {event.sharedBy ? <span className="text-muted">· shared by {event.sharedBy}</span> : null}
+          {event.connectionName ? <span className="text-muted wrap-any">· {event.connectionName}</span> : null}
+          {event.sharedBy ? <span className="text-muted wrap-any">· shared by {event.sharedBy}</span> : null}
           {event.yearly ? <span className="text-muted">· every year</span> : null}
         </div>
         {person ? (
-          <p className="text-sm">
+          <p className="wrap-any text-sm">
             <Users size={14} strokeWidth={1.5} className="mr-1 inline" aria-hidden="true" />
             {person.name}
-            {event.turning ? ` · ${event.source === "birthday" ? `turns ${event.turning}` : `${event.turning} years`}` : ""}
+            {event.turning ? ` · ${event.source === "birthday" ? `turns ${event.turning}` : plural(event.turning, "year")}` : ""}
           </p>
         ) : null}
         {event.location ? (
-          <p className="text-sm text-muted">
+          <p className="wrap-any text-sm text-muted">
             <MapPin size={14} strokeWidth={1.5} className="mr-1 inline" aria-hidden="true" />
             {event.location}
           </p>
         ) : null}
         {event.toBuy && event.toBuy.length > 0 ? (
-          <p className="text-sm">
+          <p className="wrap-any text-sm">
             <b>Still to buy:</b> {event.toBuy.map((t) => t.name).join(", ")}
           </p>
         ) : event.covered ? (
           <p className="text-sm text-muted">Gifts are covered for this one.</p>
         ) : null}
-        {event.note ? <p className="whitespace-pre-wrap text-sm text-muted">{event.note}</p> : null}
+        {event.note ? <p className="wrap-any whitespace-pre-wrap text-sm text-muted">{event.note}</p> : null}
         <div className="flex flex-wrap gap-2">
           {giftFor || event.source === "birthday" || event.source === "anniversary" || event.source === "occasion" ? (
             <Button pill onClick={() => closeThen(() => open({ type: "gift", id: null, direction: "given", receiverId: giftFor }))}>
@@ -246,7 +250,7 @@ export function ManualForm({ open, editing, date, onClose }: { open: boolean; ed
       footer={
         <>
           {error ? (
-            <p className="text-sm text-primary" role="alert">
+            <p className="form-error text-sm" role="alert">
               {error}
             </p>
           ) : null}
@@ -266,7 +270,7 @@ export function ManualForm({ open, editing, date, onClose }: { open: boolean; ed
         }}
       >
         <Field label="Title">
-          <TextInput value={draft.title} maxLength={120} onChange={(e) => set("title", e.target.value)} placeholder="Piano recital" autoFocus />
+          <TextInput value={draft.title} maxLength={120} onChange={(e) => set("title", e.target.value)} placeholder="Piano recital…" autoComplete="off" autoFocus={!isTouch()} />
         </Field>
         <Field label="Date">
           <TextInput type="date" value={draft.date} onChange={(e) => set("date", e.target.value)} required />

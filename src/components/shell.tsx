@@ -30,6 +30,7 @@ import { needsYou } from "@/lib/gifts/insights";
 import { useLedger } from "@/lib/gifts/store";
 import { setTheme, useTheme } from "@/lib/theme";
 import { useSession } from "@/lib/gifts/use-session";
+import { initialsOf, plural } from "@/lib/format";
 import { startTour } from "@/lib/tour";
 import { versionLabel } from "@/lib/version";
 import { cn } from "@/lib/utils";
@@ -171,10 +172,7 @@ function SideSearch() {
   );
 }
 
-function initials(name: string) {
-  const parts = name.trim().split(/\s+/).filter(Boolean);
-  return ((parts[0]?.[0] ?? "R") + (parts.length > 1 ? (parts[parts.length - 1]?.[0] ?? "") : "")).toUpperCase();
-}
+const initials = (name: string) => initialsOf(name, "R");
 
 function Sidebar() {
   const household = useLedger((state) => state.householdName);
@@ -209,8 +207,9 @@ function Sidebar() {
           <Bell size={18} strokeWidth={1.5} />
           Notifications
           {needs.count > 0 ? (
-            <span className="badge" aria-label={`${needs.count} things need you`}>
-              {needs.count}
+            <span className="badge">
+              <span aria-hidden="true">{needs.count}</span>
+              <span className="sr-only">{plural(needs.count, "thing needs you", "things need you")}</span>
             </span>
           ) : null}
         </button>
