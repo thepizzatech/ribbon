@@ -41,6 +41,12 @@
 }
 .tab[aria-selected="true"] { border-bottom-color: var(--color-foreground); color: var(--color-foreground); }
 .settings-grid { display: grid; gap: 16px; grid-template-columns: minmax(0, 1fr); max-width: 760px; }
+/* On a desktop the settings cards flow into columns instead of one narrow strip. */
+@media (min-width: 1100px) {
+  .settings-grid { display: block; max-width: none; columns: 2; column-gap: 16px; }
+  .settings-grid > * { break-inside: avoid; margin-bottom: 16px; }
+}
+@media (min-width: 1800px) { .settings-grid { columns: 3; } }
 .stack { display: flex; flex-direction: column; gap: 12px; }
 .kv { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 0; border-top: 1px solid var(--color-border); font-size: 0.875rem; }
 .kv:first-child { border-top: 0; }
@@ -59,8 +65,15 @@
 .csv-table tr.is-dup td { color: var(--color-muted); }
 
 /* Secret Santa and shared lists */
-.santa-grid { display: grid; gap: 16px; grid-template-columns: minmax(0, 1fr); }
-@media (min-width: 900px) { .santa-grid { grid-template-columns: 340px minmax(0, 1fr); align-items: start; } }
+.card-grid { display: grid; gap: 16px; grid-template-columns: minmax(0, 1fr); }
+@media (min-width: 900px) { .card-grid { grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); align-items: start; } }
+.santa-detail { max-width: 760px; }
+.santa-cards { display: flex; flex-direction: column; gap: 12px; }
+@media (min-width: 1100px) {
+  .santa-detail { max-width: none; }
+  .santa-cards { display: block; columns: 2; column-gap: 16px; }
+  .santa-cards > * { break-inside: avoid; margin-bottom: 16px; }
+}
 .ex-item { display: block; width: 100%; border: 1px solid var(--color-border); border-radius: 14px; background: var(--color-card); padding: 12px 14px; color: inherit; font: inherit; text-align: left; }
 .ex-item[aria-current="true"] { border-color: var(--color-foreground); }
 .reveal { border-radius: 16px; background: linear-gradient(135deg, #8b5cf6, #ec4899); padding: 20px; color: #fff; }
@@ -106,3 +119,19 @@
   .driver-popover.ribbon-tour .driver-popover-close-btn:hover { background: var(--color-secondary) !important; }
 }
 .driver-popover.ribbon-tour .driver-popover-title { padding-right: 24px; }
+
+/* Ask: a stack on a phone; on a desktop the prompts and the form sit left and the answer fills the right. */
+.ask-page { display: flex; flex-direction: column; gap: 20px; max-width: 768px; }
+.ask-idle { display: none; }
+@media (min-width: 1100px) {
+  .ask-page { display: grid; max-width: none; grid-template-columns: minmax(340px, 5fr) minmax(0, 7fr); grid-template-rows: auto auto auto 1fr; column-gap: 24px; row-gap: 20px; align-items: start; }
+  .ask-head { grid-column: 1 / -1; }
+  .ask-prompts { grid-column: 1; flex-wrap: wrap; overflow: visible; }
+  .ask-form { grid-column: 1; }
+  .ask-note { grid-column: 1; }
+  .ask-out { grid-column: 2; grid-row: 2 / span 3; }
+  .ask-idle { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; min-height: 280px; border: 1px dashed var(--color-border); border-radius: var(--card-radius); padding: 32px; color: var(--color-muted); font-size: 0.875rem; text-align: center; }
+  .ask-idle p:first-of-type { color: var(--color-foreground); font-weight: 500; }
+}
+.settings-notice { max-width: 760px; }
+@media (min-width: 1100px) { .settings-notice { max-width: none; } }

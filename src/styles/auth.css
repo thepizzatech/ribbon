@@ -325,3 +325,31 @@
     display: inline;
   }
 }
+
+/* Desktop: the sign-in card and the wizard grow a little, and the wizard's people sit two to a row. */
+@media (min-width: 1024px) {
+  .auth-card {
+    width: min(100%, 520px);
+    padding: 40px;
+  }
+
+  .auth-title {
+    font-size: 1.75rem;
+  }
+
+  .welcome-bar {
+    padding-inline: 40px;
+  }
+
+  .welcome-main {
+    width: min(100%, 780px);
+    padding-top: 72px;
+  }
+
+  .welcome-members {
+    display: grid;
+    gap: 12px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: start;
+  }
+}

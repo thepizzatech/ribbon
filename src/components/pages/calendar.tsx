@@ -95,12 +95,14 @@ export function CalendarPage() {
 
   return (
     <div className="cal-page" data-view={view}>
-      <header className="cal-head">
+      <header className="page-head">
         <div className="min-w-0">
-          <h1 className="cal-title">{titleOf(view, anchor, today)}</h1>
-          <p className="cal-range">{rangeLabel(view, anchor)}</p>
+          <h1 className="page-title">Calendar</h1>
+          <p className="mt-1 text-sm text-muted" aria-live="polite">
+            {titleOf(view, anchor, today)} · {rangeLabel(view, anchor)}
+          </p>
         </div>
-        <div className="cal-tools">
+        <div className="actions cal-tools">
           <div className="cal-nav" role="group" aria-label="Move">
             <button type="button" className="cal-pill press" onClick={toToday} disabled={view === "day" ? anchor === today : range.from <= today && today <= range.to}>
               Today

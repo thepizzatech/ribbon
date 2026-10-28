@@ -13,6 +13,107 @@
   max-width: 420px;
 }
 
+/* The summary rail only exists on a wide desktop; the table gets the rest of the width. */
+.ledger-layout {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.ledger-main {
+  min-width: 0;
+}
+
+.ledger-rail {
+  display: none;
+}
+
+@media (min-width: 1440px) {
+  .ledger-layout {
+    grid-template-columns: minmax(0, 1fr) 300px;
+    align-items: start;
+  }
+
+  .ledger-rail {
+    position: sticky;
+    top: 28px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+}
+
+@media (min-width: 1700px) {
+  .ledger-layout {
+    grid-template-columns: minmax(0, 1fr) 340px;
+    gap: 20px;
+  }
+}
+
+.rail-rows {
+  margin: 12px 0 0;
+}
+
+.rail-rows > div {
+  display: flex;
+  min-height: 44px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border-top: 1px solid var(--color-border);
+  color: var(--color-muted);
+  font-size: 0.8125rem;
+}
+
+.rail-rows dd {
+  margin: 0;
+  color: var(--color-foreground);
+  font-size: 1.0625rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+
+.rail-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.rail-btn {
+  display: flex;
+  min-height: 44px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  background: var(--color-card);
+  padding: 0 14px;
+  color: var(--color-foreground);
+  font: inherit;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  text-align: left;
+}
+
+.rail-btn b {
+  font-variant-numeric: tabular-nums;
+}
+
+.rail-btn[aria-pressed="true"] {
+  border-color: var(--color-primary);
+  background: var(--color-primary);
+  color: var(--color-primary-foreground);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .rail-btn:hover:not([aria-pressed="true"]) {
+    background: var(--color-secondary);
+  }
+}
+
 .search-field svg {
   position: absolute;
   top: 50%;
@@ -98,6 +199,13 @@
   }
 }
 
+@media (min-width: 768px) {
+  .ledger-table .c-date,
+  .ledger-table .c-status {
+    white-space: nowrap;
+  }
+}
+
 .ledger-table .c-amount,
 .ledger-table th.c-amount button {
   justify-content: flex-end;
@@ -108,7 +216,7 @@
 .row-title {
   display: block;
   overflow: hidden;
-  max-width: 280px;
+  max-width: min(46ch, 34vw);
   border: 0;
   background: transparent;
   padding: 0;

@@ -2,8 +2,10 @@ import { Link } from "@tanstack/react-router";
 import { Plus } from "lucide-react";
 import { useOverlay } from "@/components/overlay";
 import { Button } from "@/components/ui";
+import { UpcomingCard } from "@/components/upcoming-card";
 import { personCounts, type Person } from "@/lib/gifts/model";
 import { useLedger } from "@/lib/gifts/store";
+import { formatMonthDay } from "@/lib/gifts/upcoming";
 
 export function initialsOf(name: string) {
   const parts = name.trim().split(/\s+/).filter(Boolean);
@@ -31,8 +33,15 @@ export function PeoplePage() {
           </Button>
         </div>
       </div>
-      <Section title="Household" people={household} gifts={gifts} />
-      <Section title="Everyone else" people={outside} gifts={gifts} />
+      <div className="people-layout">
+        <div className="min-w-0">
+          <Section title="Household" people={household} gifts={gifts} />
+          <Section title="Everyone else" people={outside} gifts={gifts} />
+        </div>
+        <aside className="people-rail" aria-label="Coming up">
+          <UpcomingCard />
+        </aside>
+      </div>
     </div>
   );
 }
@@ -66,6 +75,7 @@ function Section({
                   <span className="meta">
                     <span className="name">{person.name}</span>
                     <span className="rel">{person.role || title}</span>
+                    {person.birthday ? <span className="rel when">Birthday {formatMonthDay(`--${person.birthday.slice(-5)}`)}</span> : null}
                   </span>
                   <span className="counts tnum">
                     Gave <b>{counts.gave}</b>

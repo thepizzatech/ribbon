@@ -50,4 +50,21 @@ describe("stylesheets", () => {
     const extras = readFileSync(new URL("extras.css", dir), "utf8");
     assert.doesNotMatch(extras, /\.person-link[^}]*font-size:[^;]*!important/);
   });
+
+  test("on a desktop the page fills the width beside the sidebar instead of sitting in a narrow column", () => {
+    const shell = readFileSync(new URL("shell.css", dir), "utf8");
+    const desktop = shell.slice(shell.indexOf("@media (min-width: 1024px)"));
+    const page = /\.page\s*\{([^}]*)\}/.exec(desktop)?.[1] ?? "";
+    assert.match(page, /width:\s*100%/);
+    const cap = /max-width:\s*(\d+)px/.exec(page)?.[1];
+    assert.ok(cap && Number(cap) >= 1920, `desktop .page max-width is ${cap}px`);
+    // The Calendar used to be the one page that escaped the cap; now no page needs to.
+    for (const file of files) assert.doesNotMatch(readFileSync(new URL(file, dir), "utf8"), /\.page:has\(/);
+  });
+
+  test("the Calendar uses the same page heading as the other pages", () => {
+    const cal = readFileSync(new URL("../components/pages/calendar.tsx", import.meta.url), "utf8");
+    assert.match(cal, /<h1 className="page-title">Calendar<\/h1>/);
+    assert.match(cal, /className="page-head"/);
+  });
 });

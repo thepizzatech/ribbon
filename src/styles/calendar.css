@@ -56,12 +56,8 @@ html[data-theme="dark"] {
 .nav-link { position: relative; }
 
 /* ---- page ---- */
-.page:has(.cal-page) { width: 100%; max-width: none; }
-@media (min-width: 1024px) { .page:has(.cal-page) { padding: 24px 32px 40px; } }
 .cal-page { display: flex; flex-direction: column; gap: 14px; }
-.cal-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 16px; }
-.cal-title { font-size: 1.25rem; font-weight: 600; letter-spacing: -0.02em; line-height: 1.2; }
-.cal-range { margin-top: 2px; color: var(--color-muted); font-size: 0.8125rem; }
+.cal-page > .page-head { margin-bottom: 6px; }
 .cal-tools { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
 .cal-nav { display: inline-flex; align-items: center; gap: 6px; }
 .cal-pill, .cal-round, .cal-add { display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: 32px; border: 1px solid var(--color-border); border-radius: 999px; background: var(--color-card); color: var(--color-foreground); font: inherit; font-size: 0.8125rem; font-weight: 500; box-shadow: var(--whisper); }
@@ -81,6 +77,7 @@ html[data-theme="dark"] {
 .cal-src.is-on { border-color: var(--color-border); background: var(--color-card); color: var(--color-foreground); text-decoration: none; }
 .cal-layout { display: grid; gap: 16px; grid-template-columns: minmax(0, 1fr); }
 @media (min-width: 1100px) { .cal-layout { grid-template-columns: minmax(0, 1fr) 300px; align-items: start; } }
+@media (min-width: 1700px) { .cal-layout { grid-template-columns: minmax(0, 1fr) 360px; gap: 20px; } }
 .cal-main { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
 .cal-kpis { display: grid; gap: 10px; grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .cal-kpi { padding: 14px 16px; border: 1px solid var(--color-border); border-radius: 14px; background: var(--color-card); box-shadow: var(--whisper); min-width: 0; }
@@ -182,7 +179,6 @@ html[data-theme="dark"] {
 
 /* ---- phones: one day at a time, panel below ---- */
 @media (max-width: 767px) {
-  .cal-title { font-size: 1.125rem; }
   .wk { --gut: 40px; --n: 1; }
   .wk-strip { display: flex; gap: 2px; padding: 8px 8px 6px; border-bottom: 1px solid var(--line); }
   .wk-pill { display: flex; flex: 1; flex-direction: column; align-items: center; gap: 1px; border: 0; border-radius: 12px; background: transparent; padding: 5px 0; color: var(--color-muted); font: inherit; font-size: 0.6875rem; }

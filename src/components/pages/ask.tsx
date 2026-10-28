@@ -68,15 +68,15 @@ export function AskPage() {
   }, [q]);
 
   return (
-    <div className="flex max-w-3xl flex-col gap-5">
-      <div className="page-head" style={{ marginBottom: 0 }}>
+    <div className="ask-page">
+      <div className="page-head ask-head" style={{ marginBottom: 0 }}>
         <div>
           <h1 className="page-title">Ask</h1>
           <p className="mt-1 max-w-xl text-sm text-muted">Questions and a year note, answered only from this ledger.</p>
         </div>
       </div>
 
-      <div className="chip-row">
+      <div className="chip-row ask-prompts">
         {prompts.map((prompt) => (
           <button
             key={prompt.label}
@@ -91,7 +91,7 @@ export function AskPage() {
       </div>
 
       <form
-        className="flex flex-col gap-3"
+        className="ask-form flex flex-col gap-3"
         onSubmit={(event) => {
           event.preventDefault();
           void ask(question);
@@ -110,15 +110,23 @@ export function AskPage() {
       </form>
 
       {error ? (
-        <p className="card text-sm" role="alert">
+        <p className="card ask-out text-sm" role="alert">
           {error}
         </p>
       ) : null}
 
-      {pending ? <p className="text-sm text-muted">Reading the ledger…</p> : null}
+      {pending ? <p className="ask-out text-sm text-muted">Reading the ledger…</p> : null}
+
+      {!error && !pending && !answer ? (
+        <div className="ask-idle ask-out" aria-hidden="true">
+          <Sparkles size={22} strokeWidth={1.5} />
+          <p>Answers show up here.</p>
+          <p>Pick a question on the left or type your own. Ribbon only reads this ledger.</p>
+        </div>
+      ) : null}
 
       {answer ? (
-        <article className="card">
+        <article className="card ask-out">
           <h2 className="card-title flex items-center gap-2">
             <Sparkles size={16} strokeWidth={1.5} aria-hidden="true" /> Answer
           </h2>
@@ -128,7 +136,7 @@ export function AskPage() {
         </article>
       ) : null}
 
-      <p className="text-sm text-muted">
+      <p className="ask-note text-sm text-muted">
         A question sends the gift list to the assistant. Nothing is sent until you ask. The ledger itself stays on your server.
       </p>
     </div>

@@ -42,7 +42,7 @@ export function SettingsPage({ tab }: { tab: SettingsTab }) {
         </div>
       </div>
       {session.data && !session.data.secure ? (
-        <div className="mb-4" style={{ maxWidth: 760 }}>
+        <div className="settings-notice mb-4">
           <InsecureNotice session={session.data} />
         </div>
       ) : null}

@@ -4,6 +4,23 @@ All notable changes to Ribbon are recorded here. The format follows [Keep a Chan
 
 ## [Unreleased]
 
+Development build `0.4.0-dev.3`: the desktop layout. Phones are unchanged apart from the Calendar's new title. No data or settings changes.
+
+### Changed
+
+- **Every page fills the desktop screen.** The page used to stop at 1240 px and sit in the middle, which left wide empty margins on a 1080p or larger monitor while the Calendar filled the window. All pages now use the full width beside the sidebar (up to 2200 px), with the same side padding as the Calendar.
+- **Overview** keeps its three columns but they now grow with the window instead of stopping at 1240 px.
+- **People** shows as many cards per row as fit, adds each person's birthday, and has a "Coming up" panel beside the cards on screens 1440 px and wider.
+- **A person's page** is two columns (wishlist, budget and by-occasion on the left, the timeline on the right) and three on screens 1700 px and wider.
+- **Ledger** uses the whole width for the table (long gift names are no longer cut at 280 px) and, from 1440 px, a summary panel: gifts, received, given and the recorded total for the current filters, plus one-tap "Thank-yous owed" and "Still to give" filters.
+- **Shared wishlists** and the **Secret Santa** exchange list are an even grid of cards (they were split into a fixed 340 px column and one stretched column). An open exchange lays its cards out in two columns.
+- **Ask** puts the question prompts and the box on the left and the answer on the right, from 1100 px.
+- **Settings** cards flow into two columns (three from 1800 px) instead of one 760 px strip, on every tab.
+- **Sign-in, create account and Welcome setup** are bigger on a desktop, and the people in the Welcome wizard sit two to a row.
+- **The Calendar has a page title** like the other pages: "Calendar" in the same heading style, with the visible range ("This week · Oct 26 – Nov 1, 2026") as the subtitle. Today, the arrows, Day/Week/Month and + Event sit on the right of it, where other pages keep their buttons.
+
+## [0.4.0-dev.2] - 2026-10-26
+
 Development build `0.4.0-dev.2`: fixes from a UI and accessibility audit of the Calendar and the app shell. No data or settings changes.
 
 ### Fixed

@@ -40,7 +40,7 @@ export function SharedPage() {
           <h2 className="section-title" style={{ marginTop: 0 }}>
             {household}
           </h2>
-          <div className="santa-grid">
+          <div className="card-grid">
             {data
               .filter((l) => l.household.name === household)
               .map((list) => (
