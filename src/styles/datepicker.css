@@ -1,0 +1,274 @@
+/* DateField: a text box you can type in, plus a calendar button. The calendar floats on a desktop and opens in the sheet on a phone. */
+.dp-control {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+.dp-input {
+  padding-right: 48px;
+}
+.dp-trigger {
+  position: absolute;
+  top: 50%;
+  right: 4px;
+  display: grid;
+  width: 36px;
+  height: 36px;
+  place-items: center;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--color-muted);
+  transform: translateY(-50%);
+  cursor: pointer;
+}
+.dp-trigger[aria-expanded="true"] {
+  background: var(--color-card);
+  color: var(--color-foreground);
+}
+.dp-trigger:focus-visible {
+  outline: 2px solid var(--color-out);
+  outline-offset: -2px;
+}
+@media (hover: hover) and (pointer: fine) {
+  .dp-trigger:hover {
+    background: var(--color-card);
+    color: var(--color-foreground);
+  }
+}
+@media (pointer: coarse) {
+  .dp-trigger {
+    width: 44px;
+    height: 44px;
+    right: 0;
+  }
+  .dp-input {
+    padding-right: 46px;
+  }
+}
+.dp-error {
+  color: var(--tone-rose-fg);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  overflow-wrap: anywhere;
+}
+html[data-theme="dark"] .dp-error {
+  color: var(--tone-rose-fg);
+}
+/* In a tight row (Settings > Occasions) the box is only as wide as "MM-DD". */
+.dp-compact {
+  flex: none;
+  width: 7.25rem;
+}
+.dp-compact .dp-input {
+  padding-left: 10px;
+}
+
+.dp-pop {
+  z-index: 70; /* above the sheet (50) */
+  width: min(19.5rem, calc(100vw - 16px));
+  border: 1px solid var(--color-border);
+  border-radius: 16px;
+  background: var(--color-card);
+  box-shadow: var(--float-shadow);
+  color: var(--color-foreground);
+  animation: fade-in var(--motion-quick) var(--ease-out);
+}
+.dp-inline {
+  border: 1px solid var(--color-border);
+  border-radius: 14px;
+  background: var(--color-card);
+  animation: fade-in var(--motion-quick) var(--ease-out);
+}
+.dp-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px;
+  font-weight: 400;
+}
+.dp-loading {
+  color: var(--color-muted);
+  font-size: 0.8125rem;
+}
+.dp-panel .switch-row {
+  min-height: 44px;
+}
+
+.dp-root {
+  color: var(--color-foreground);
+  font-size: 0.875rem;
+}
+.dp-months {
+  position: relative;
+}
+.dp-caption {
+  display: flex;
+  min-height: 40px;
+  align-items: center;
+  padding-right: 80px; /* room for the arrows */
+}
+.dp-dropdowns {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.dp-dropdown-root {
+  position: relative;
+  display: inline-flex;
+}
+.dp-dropdown {
+  min-height: 36px;
+  max-width: 7.5rem;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: var(--color-input);
+  padding: 0 6px;
+  color: var(--color-foreground);
+  font: inherit;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+}
+.dp-dropdown:focus-visible {
+  outline: 2px solid var(--color-out);
+  outline-offset: 1px;
+}
+.dp-caption-label {
+  /* The select already says it; this is the label react-day-picker draws on top of its dropdown. */
+  display: none;
+}
+.dp-nav {
+  position: absolute;
+  top: 0;
+  right: 0;
+  display: flex;
+  gap: 2px;
+}
+.dp-nav-btn {
+  display: grid;
+  width: 36px;
+  height: 36px;
+  place-items: center;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--color-foreground);
+  cursor: pointer;
+}
+.dp-nav-btn:disabled {
+  color: var(--color-subtle);
+  cursor: default;
+  opacity: 0.5;
+}
+.dp-nav-btn:focus-visible {
+  outline: 2px solid var(--color-out);
+  outline-offset: -2px;
+}
+.dp-chevron {
+  width: 16px;
+  height: 16px;
+  fill: currentColor;
+}
+.dp-grid {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+.dp-weekday {
+  padding: 6px 0;
+  color: var(--color-muted);
+  font-size: 0.75rem;
+  font-weight: 500;
+  text-align: center;
+}
+.dp-day {
+  padding: 1px;
+  text-align: center;
+}
+.dp-day-btn {
+  width: 100%;
+  min-height: 36px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--color-foreground);
+  font: inherit;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+}
+.dp-day-btn:focus-visible {
+  outline: 2px solid var(--color-out);
+  outline-offset: -2px;
+}
+.dp-day.is-outside .dp-day-btn {
+  color: var(--color-subtle);
+}
+.dp-day.is-today .dp-day-btn {
+  box-shadow: inset 0 0 0 1.5px var(--color-muted);
+  font-weight: 600;
+}
+.dp-day.is-selected .dp-day-btn {
+  background: var(--color-primary);
+  box-shadow: none;
+  color: var(--color-primary-foreground);
+  font-weight: 600;
+}
+.dp-day.is-disabled .dp-day-btn {
+  color: var(--color-subtle);
+  cursor: default;
+  opacity: 0.45;
+}
+@media (hover: hover) and (pointer: fine) {
+  .dp-day:not(.is-selected):not(.is-disabled) .dp-day-btn:hover,
+  .dp-nav-btn:not(:disabled):hover {
+    background: var(--color-secondary);
+  }
+}
+.dp-day-btn:active:not(:disabled),
+.dp-nav-btn:active:not(:disabled) {
+  transform: scale(0.96);
+}
+.dp-foot {
+  display: flex;
+  justify-content: flex-end;
+  gap: 4px;
+}
+@media (pointer: coarse) {
+  .dp-day-btn {
+    min-height: 44px;
+  }
+  .dp-nav-btn {
+    width: 44px;
+    height: 44px;
+  }
+  .dp-nav {
+    gap: 0;
+  }
+  .dp-caption {
+    min-height: 44px;
+    padding-right: 92px;
+  }
+  .dp-dropdown {
+    min-height: 44px;
+  }
+  .dp-foot .btn {
+    min-height: 44px;
+  }
+}
+
+/* Two dates side by side (birthday and anniversary) on a tablet or desktop, one under the other on a phone. */
+.date-pair {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: minmax(0, 1fr);
+}
+@media (min-width: 768px) {
+  .date-pair {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+/* A calendar opened inside a phone sheet needs the whole row, even when the field shares it with another. */
+.dp-open-inline {
+  grid-column: 1 / -1;
+}

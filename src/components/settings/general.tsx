@@ -1,7 +1,6 @@
 import { X } from "lucide-react";
 import { useEffect, useState } from "react";
-import { Button, Field, TextInput } from "@/components/ui";
-import { cleanOccasionDate } from "@/lib/gifts/model";
+import { Button, DateField, Field, TextInput } from "@/components/ui";
 import { useLedger } from "@/lib/gifts/store";
 import { setTheme, useTheme } from "@/lib/theme";
 import { toast } from "@/lib/toast";
@@ -18,15 +17,11 @@ export function GeneralTab() {
   const theme = useTheme();
   const [name, setName] = useState(householdName);
   const [rows, setRows] = useState(occasions);
-  const [dates, setDates] = useState<Record<string, string>>(occasionDates);
   const [next, setNext] = useState("");
   const [message, setMessage] = useState("");
 
   useEffect(() => setName(householdName), [householdName]);
-  useEffect(() => {
-    setRows(occasions);
-    setDates(occasionDates);
-  }, [occasions, occasionDates]);
+  useEffect(() => setRows(occasions), [occasions]);
 
   function add() {
     const result = addOccasion(next);
@@ -100,24 +95,17 @@ export function GeneralTab() {
                   }
                 }}
               />
-              <TextInput
-                className="field occ-date"
-                value={dates[occasions[index] ?? ""] ?? ""}
-                placeholder="MM-DD"
-                inputMode="numeric"
-                maxLength={5}
+              <DateField
+                mode="month-day"
+                compact
+                commitOn="blur"
                 aria-label={`Yearly date for ${occasions[index] ?? "occasion"}`}
-                onChange={(e) => setDates((cur) => ({ ...cur, [occasions[index] ?? ""]: e.target.value }))}
-                onBlur={(e) => {
+                value={occasionDates[occasions[index] ?? ""] ?? ""}
+                onChange={(value) => {
                   const key = occasions[index];
                   if (!key) return;
-                  const text = e.currentTarget.value.trim().replace("/", "-");
-                  if (!text) return setOccasionDate(key, null);
-                  const clean = cleanOccasionDate(text.length === 4 ? `0${text}` : text);
-                  if (clean) {
-                    setOccasionDate(key, clean);
-                    setMessage("");
-                  } else setMessage("Dates look like 12-25 (month-day).");
+                  setOccasionDate(key, value || null);
+                  setMessage("");
                 }}
               />
               <button

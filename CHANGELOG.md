@@ -4,6 +4,21 @@ All notable changes to Ribbon are recorded here. The format follows [Keep a Chan
 
 ## [Unreleased]
 
+Development build `0.4.0-dev.4`: a calendar picker on every date field, and the calendar feed catches up with the Calendar page. No data or settings changes. Dates already saved are untouched.
+
+### Added
+
+- **Date fields have a calendar.** Wherever Ribbon asks for a date there is now a box you can still type in (`2016-12-02`, `12/2/2016`, `12-02`) plus a calendar button that opens a month grid with month and year lists. It is used for a person's **birthday** and **anniversary**, an occasion's **yearly date** (Settings → General), a gift's **date**, a Calendar **event** date and a **Secret Santa** date. Picking a day fills the box, and anything that can't be read is flagged instead of being saved as something else. Keyboard: arrow keys move by day, Page Up/Down by month, **Escape** closes only the calendar, and focus goes back to its button. On a phone, inside a sheet, the calendar opens in the sheet under the box instead of floating over it. The calendar code loads only the first time it is opened.
+- **"I don’t know the year"** for birthdays and anniversaries: the year list goes away and Ribbon saves just the month and day, so there is no age on the calendar. 29 February works with or without a year.
+
+### Fixed
+
+- **The Calendar and the sidebar summary now update straight after you save.** Adding a person or birthday, changing an occasion date, adding or moving a gift, importing a CSV or restoring a backup, and creating or deleting a Secret Santa all refresh the Calendar right away (it used to show the old picture until you reloaded).
+- **The calendar feed (.ics) now holds what the Calendar page holds.** It is built from the same list, so the two can't drift: birthdays, anniversaries and occasion dates (still yearly, with the "Start shopping" reminders), plus **gift deadlines**, **Secret Santa dates** and **your own events** (yearly ones repeat; timed ones keep their clock time). Gifts planned for you stay out of your feed, and events imported from other calendars are still never re-exported.
+- **Gift and Secret Santa dates are checked on the server.** A date like `2026-13-45` is refused with a message. A gift that already has an older, unreadable date can still be edited as long as its date is left alone, and CSV import and backup restore are unchanged.
+
+## [0.4.0-dev.3] - 2026-10-27
+
 Development build `0.4.0-dev.3`: the desktop layout. Phones are unchanged apart from the Calendar's new title. No data or settings changes.
 
 ### Changed

@@ -16,7 +16,9 @@ The **Overview** shows gifts this year (received, given, spent, thank-yous sent)
 
 The **Calendar** page shows birthdays, anniversaries, yearly occasions, gift deadlines, Secret Santa dates, your own events and events imported from other calendars, in a **Day**, **Week** or compact **Month** view with previous/next and **Today**. Filter chips pick family members and kinds of events (including each connected calendar). Three tiles at the top count **events this week**, **birthdays in the next 30 days** and **gifts still needed**; a side panel lists what is coming up and gift deadlines, with **Add gift idea** one tap away. Click an event for details and the actions that fit it: add a gift idea for that person, go to their page, or edit your own events. On a phone it collapses to one day at a time with the panel below.
 
-You can add your own events (title, date and time or all day, an optional person, repeat every year, private or shared with the household). Events are only shown to the household in the ways you choose, and a gift planned for you never appears on your own calendar.
+You can add your own events (title, date and time or all day, an optional person, repeat every year, private or shared with the household).
+
+**Dates are picked from a calendar.** Every date box in Ribbon (a person's birthday and anniversary, an occasion's yearly date under Settings → General, a gift's date, an event's date and a Secret Santa date) is a text box you can type in (`2016-12-02`, `12/2/2016`, or `12-02` for a birthday without a year) with a calendar button beside it. The calendar has month and year lists, so a birthday in 1985 is two taps away, and a **"I don’t know the year"** switch for birthdays and anniversaries that saves only the month and day. Whatever you save shows on the Calendar page straight away. With the keyboard, the arrow keys move by day, Page Up and Page Down by month, Enter picks, and Escape closes just the calendar. On a phone the calendar opens inside the sheet, below the box. Events are only shown to the household in the ways you choose, and a gift planned for you never appears on your own calendar.
 
 **Settings → Calendars** connects Google, Apple/iCloud, Outlook, Fastmail, Nextcloud and anything else that offers an iCal link, an `.ics` file or CalDAV, read-only and private to you unless you share a connection. Birthday-like events found there go through a review step (match a person, create one, or ignore). Details, including the Google OAuth setup, are in [Connecting calendars](calendars.md).
 
@@ -42,7 +44,7 @@ People have birthdays and anniversaries; occasions can repeat yearly. The Overvi
 
 The opposite direction of [Connecting calendars](calendars.md): Ribbon's own reminders for your calendar app. It never includes events imported from other calendars.
 
-Settings → Account → Calendar creates a secret link (`/api/calendar/<token>.ics`) to subscribe to from Google, Apple or Outlook calendar. It carries upcoming dates with a reminder (default 14 days). Regenerating the link revokes the old one. Treat the link like a password.
+Settings → Account → Calendar creates a secret link (`/api/calendar/<token>.ics`) to subscribe to from Google, Apple or Outlook calendar. It carries the same things as the Calendar page for the next twelve months: birthdays, anniversaries and yearly occasions (each repeating every year, with a "Start shopping" reminder, default 14 days ahead, when something is still to buy), gift deadlines, Secret Santa dates and your own events (yearly ones repeat; timed ones keep their clock time). A gift planned for you is never in your feed. Regenerating the link revokes the old one. Treat the link like a password.
 
 ## Backups
 

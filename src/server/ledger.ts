@@ -10,6 +10,7 @@ import {
   cleanOccasionName,
   cleanPerson,
   isGift,
+  isIsoDate,
   isPerson,
   normalizeOccasions,
   type Backup,
@@ -303,6 +304,7 @@ function peopleExist(ctx: Ctx, gift: Gift): boolean {
   return n === new Set([gift.giverId, gift.receiverId]).size;
 }
 
+const BAD_DATE_MESSAGE = "Pick a real date, like 2026-12-02.";
 const SURPRISE_MESSAGE = "Surprises for you stay hidden from you, so plan gifts for other people here.";
 
 export function addGift(ctx: Ctx, input: unknown): Result<{ gift: Gift }> {
@@ -315,6 +317,7 @@ export function addGift(ctx: Ctx, input: unknown): Result<{ gift: Gift }> {
   } as Gift;
   if (!isGift(draft)) return fail(400, "That gift is missing a title, date, people, or status.");
   const gift = cleanGift(draft);
+  if (!isIsoDate(gift.date)) return fail(400, BAD_DATE_MESSAGE);
   if (!peopleExist(ctx, gift)) return fail(400, "Pick people from this household.");
   if (isHiddenGift(gift, ctx.me)) return fail(400, SURPRISE_MESSAGE);
   if (ctx.db.prepare("SELECT 1 FROM gifts WHERE id = ?").get(gift.id)) return fail(409, "That gift already exists.");
@@ -351,6 +354,8 @@ export function updateGift(ctx: Ctx, id: string, patch: unknown): Result<{ gift:
   for (const key of GIFT_FIELDS) if (body[key] !== undefined) merged[key] = body[key];
   if (!isGift(merged)) return fail(400, "That gift is missing a title, date, people, or status.");
   const gift = cleanGift(merged);
+  // A date saved by an older version stays editable (marking it bought, say); only a date being changed has to be real.
+  if (gift.date !== current.date && !isIsoDate(gift.date)) return fail(400, BAD_DATE_MESSAGE);
   if (!peopleExist(ctx, gift)) return fail(400, "Pick people from this household.");
   if (isHiddenGift(gift, ctx.me)) return fail(400, SURPRISE_MESSAGE);
   ctx.db

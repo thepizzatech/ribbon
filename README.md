@@ -11,7 +11,7 @@ Keep track of the gifts your household gives and gets, see what still needs you,
 [![CI](https://github.com/thepizzatech/ribbon/actions/workflows/ci.yml/badge.svg)](https://github.com/thepizzatech/ribbon/actions/workflows/ci.yml)
 [![Docs](https://github.com/thepizzatech/ribbon/actions/workflows/docs.yml/badge.svg)](https://ribbon.thepizza.tech)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
-[![Version 0.4.0-dev.3](https://img.shields.io/badge/version-0.4.0--dev.3-orange.svg)](CHANGELOG.md)
+[![Version 0.4.0-dev.4](https://img.shields.io/badge/version-0.4.0--dev.4-orange.svg)](CHANGELOG.md)
 [![Status: in development](https://img.shields.io/badge/status-in%20development-yellow.svg)](#status-and-roadmap)
 [![Docker image](https://img.shields.io/badge/docker-ghcr.io%2Fthepizzatech%2Fribbon-2496ED?logo=docker&logoColor=white)](https://github.com/thepizzatech/ribbon/pkgs/container/ribbon)
 
@@ -170,7 +170,7 @@ What is on you when self-hosting: use an HTTPS proxy and `PUBLIC_URL`, do not pu
 
 ## Status and roadmap
 
-Ribbon is in **active development**: the current build is `0.4.0-dev.3` and there is **no release, beta branch or tag yet**. The `dev` image tracks `main`.
+Ribbon is in **active development**: the current build is `0.4.0-dev.4` and there is **no release, beta branch or tag yet**. The `dev` image tracks `main`.
 
 - Done: the ledger, wishlists, budgets, upcoming dates and ICS feed, Secret Santa, sharing between households, CSV, passkeys and SSO, scheduled backups, the Welcome setup and tour, a full security review.
 - Next: cut the first beta (see [docs/RELEASING.md](docs/RELEASING.md); the multi-arch release build has not been run yet), then publish versioned image tags.

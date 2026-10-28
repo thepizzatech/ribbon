@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { ArrowLeft, Gift, Plus, Shuffle, X } from "lucide-react";
 import { useState } from "react";
-import { Button, Field, TextInput } from "@/components/ui";
+import { Button, DateField, Field, TextInput } from "@/components/ui";
 import { ApiError } from "@/lib/gifts/api";
 import { xapi, type Exchange } from "@/lib/gifts/api-extra";
 import { formatMoney } from "@/lib/gifts/model";
@@ -36,6 +36,7 @@ function NewExchange({ onCreated, onCancel }: { onCreated: (id: string) => void;
     mutationFn: () => xapi.createExchange({ name, date, budget: budget === "" ? null : Number(budget), organiserPeek: peek, avoidPrevious: avoid }),
     onSuccess: (d) => {
       void queryClient.invalidateQueries({ queryKey: ["exchanges"] });
+      void queryClient.invalidateQueries({ queryKey: ["calendar"] }); // the exchange's date is on the Calendar
       onCreated(d.exchange.id);
     },
     onError: (e) => setMessage(msg(e, "Couldn’t create that.")),
@@ -53,10 +54,8 @@ function NewExchange({ onCreated, onCancel }: { onCreated: (id: string) => void;
       <Field label="Name">
         <TextInput value={name} maxLength={80} placeholder="Christmas 2026" onChange={(e) => setName(e.target.value)} />
       </Field>
-      <div className="wish-form-row">
-        <Field label="Date">
-          <TextInput type="date" value={date} onChange={(e) => setDate(e.target.value)} />
-        </Field>
+      <div className="date-pair">
+        <DateField label="Date" required value={date} onChange={setDate} />
         <Field label="Budget per gift" hint="Optional">
           <TextInput type="number" inputMode="decimal" min="0" value={budget} onChange={(e) => setBudget(e.target.value)} />
         </Field>
@@ -100,6 +99,7 @@ function Detail({ id, onBack }: { id: string; onBack: () => void }) {
     mutationFn: (fn: () => Promise<{ exchange: Exchange } | null>) => fn(),
     onSuccess: (d) => {
       if (d) swap(d.exchange);
+      void queryClient.invalidateQueries({ queryKey: ["calendar"] });
       setMessage("");
     },
     onError: (e) => setMessage(msg(e, "That didn’t work.")),
@@ -345,6 +345,7 @@ function Detail({ id, onBack }: { id: string; onBack: () => void }) {
                   if (window.confirm(`Delete ${ex.name}? The draw is lost.`)) {
                     void xapi.deleteExchange(ex.id).then(() => {
                       void queryClient.invalidateQueries({ queryKey: ["exchanges"] });
+                      void queryClient.invalidateQueries({ queryKey: ["calendar"] });
                       onBack();
                     });
                   }

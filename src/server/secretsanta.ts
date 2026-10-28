@@ -1,6 +1,7 @@
 // Secret Santa exchanges across a household and its linked households. Every read is shaped for the viewer:
 // a participant sees only who they drew; the organiser sees the draw only if they opted in and are the organiser.
 import { randomUUID } from "node:crypto";
+import { isIsoDate } from "../lib/gifts/model.ts";
 import { draw, solvable } from "../lib/gifts/santa.ts";
 import { transaction, type Db } from "./db.ts";
 import { error, json, type Handler } from "./http.ts";
@@ -159,8 +160,8 @@ export const exchangeHandler: Handler = async (c) => {
     const input = (body ?? {}) as Record<string, unknown>;
     const name = cleanText(input.name, 80);
     if (!name) return error(400, "Name the exchange.");
-    const date = typeof input.date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(input.date) ? input.date : null;
-    if (!date) return error(400, "Pick the date of the exchange.");
+    const date = isIsoDate(input.date) ? input.date : null;
+    if (!date) return error(400, "Pick a real date for the exchange, like 2026-12-02.");
     const budget = cleanBudget(input.budget);
     if (budget === "bad") return error(400, "Budget should be a number.");
     const exId = randomUUID();
@@ -193,8 +194,9 @@ export const exchangeHandler: Handler = async (c) => {
     const input = (body ?? {}) as Record<string, unknown>;
     const name = input.name !== undefined ? cleanText(input.name, 80) : ex.name;
     if (!name) return error(400, "Name the exchange.");
-    const date = input.date !== undefined ? (typeof input.date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(input.date) ? input.date : null) : ex.event_date;
-    if (!date) return error(400, "Pick the date of the exchange.");
+    // A date saved by an older version is accepted back as it is; a new one has to be a real day.
+    const date = input.date !== undefined ? (input.date === ex.event_date || isIsoDate(input.date) ? (input.date as string) : null) : ex.event_date;
+    if (!date) return error(400, "Pick a real date for the exchange, like 2026-12-02.");
     const budget = input.budget !== undefined ? cleanBudget(input.budget) : ex.budget;
     if (budget === "bad") return error(400, "Budget should be a number.");
     const peek = input.organiserPeek !== undefined ? (input.organiserPeek === true ? 1 : 0) : ex.organiser_peek;

@@ -3,7 +3,7 @@ import { Link } from "@tanstack/react-router";
 import { ArrowRight, Cake, CalendarDays, Gift as GiftIcon, Heart, MapPin, PartyPopper, Plus, Shuffle, Sparkles, Trash2, Users } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useOverlay } from "@/components/overlay";
-import { Button, Field, Sheet, Switch, TextArea, TextInput } from "@/components/ui";
+import { Button, DateField, Field, Sheet, Switch, TextArea, TextInput } from "@/components/ui";
 import { plural } from "@/lib/format";
 import { stagger } from "@/lib/motion";
 import { dateLabel, daysBetween, fromIso, timeLabel } from "@/lib/calendar/dates";
@@ -272,9 +272,7 @@ export function ManualForm({ open, editing, date, onClose }: { open: boolean; ed
         <Field label="Title">
           <TextInput value={draft.title} maxLength={120} onChange={(e) => set("title", e.target.value)} placeholder="Piano recital…" autoComplete="off" autoFocus={!isTouch()} />
         </Field>
-        <Field label="Date">
-          <TextInput type="date" value={draft.date} onChange={(e) => set("date", e.target.value)} required />
-        </Field>
+        <DateField label="Date" required value={draft.date} onChange={(date) => set("date", date)} />
         <Switch id="allday" label="All day" checked={draft.allDay} onChange={(v) => set("allDay", v)} />
         {!draft.allDay ? (
           <div className="grid grid-cols-2 gap-3">

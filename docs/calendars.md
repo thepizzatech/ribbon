@@ -19,7 +19,8 @@ Connect calendars under **Settings → Calendars**.
 - **Removing a calendar deletes its events** from Ribbon, and for Google it also revokes Ribbon's access at Google.
 - Each connection has a name, a colour, a **show/hide** switch, a share switch, a last-synced time, and a plain-language error if something is wrong.
 - Ribbon looks from two months back to fourteen months ahead, and repeating events (`RRULE`, with exceptions and cancellations) are expanded for you. Imported text is always shown as plain text.
-- The **outbound reminder feed** (Settings → Account → Calendar) still exists and is separate. It never re-exports imported events.
+- The **outbound reminder feed** (Settings → Account → Calendar) still exists and is separate. It carries what the Calendar page shows from Ribbon itself (birthdays, anniversaries, occasions, gift deadlines, Secret Santa dates and your own events) and never re-exports imported events.
+- **Dates you enter show up here at once.** Birthdays, anniversaries, occasion dates, gift dates, events and Secret Santa dates all use the same date box: type it, or pick it from the calendar button. See [Features](FEATURES.md#calendar).
 
 ## Which way should I connect?
 

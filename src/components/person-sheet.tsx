@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Button, Field, Sheet, TextInput } from "@/components/ui";
+import { Button, DateField, Field, Sheet, TextInput } from "@/components/ui";
 import { useOverlay } from "@/components/overlay";
 import { RelationshipSelect } from "@/components/relationship-select";
 import {
@@ -13,21 +13,6 @@ import {
   type Relationship,
 } from "@/lib/gifts/model";
 import { useLedger } from "@/lib/gifts/store";
-
-/** "--12-02" shows as "12-02"; a full date stays as is. */
-const showDate = (value: string | null | undefined) => (value ? value.replace(/^--/, "") : "");
-
-/** "" -> null (cleared), valid input -> stored form, anything else -> false. */
-function parseDateInput(value: string): string | null | false {
-  const text = value.trim();
-  if (!text) return null;
-  const short = /^(\d{1,2})[-/](\d{1,2})$/.exec(text);
-  const full = /^(\d{4})-(\d{1,2})-(\d{1,2})$/.exec(text);
-  const pad = (n: string) => n.padStart(2, "0");
-  const [y, m, d] = full ? [full[1]!, full[2]!, full[3]!] : short ? [null, short[1]!, short[2]!] : [null, "", ""];
-  if (!m || Number(m) < 1 || Number(m) > 12 || Number(d) < 1 || Number(d) > 31) return false;
-  return y ? `${y}-${pad(m)}-${pad(d)}` : `--${pad(m)}-${pad(d)}`;
-}
 
 export function PersonSheet() {
   const { overlay, open, close } = useOverlay();
@@ -56,8 +41,8 @@ export function PersonSheet() {
     setRelationship(existing ? normalizeRelationship(existing.relationship, existing.role) : "friend");
     setCustom(existing && existing.relationship === "other" ? existing.role : "");
     setCircle(existing?.circle ?? "outside");
-    setBirthday(showDate(existing?.birthday));
-    setAnniversary(showDate(existing?.anniversary));
+    setBirthday(existing?.birthday ?? "");
+    setAnniversary(existing?.anniversary ?? "");
     setError("");
     setConfirmDelete(false);
   }, [personKey]); // eslint-disable-line react-hooks/exhaustive-deps -- reset only when a different person opens
@@ -71,20 +56,14 @@ export function PersonSheet() {
       setError("Add a name.");
       return;
     }
-    const bday = parseDateInput(birthday);
-    const anniv = parseDateInput(anniversary);
-    if (bday === false || anniv === false) {
-      setError("Dates look like 2016-12-02, or 12-02 when you don’t know the year.");
-      return;
-    }
     const next: Person = {
       id: existing?.id ?? crypto.randomUUID(),
       name: trimmed.slice(0, 80),
       role: relationship === "other" ? custom.trim().slice(0, 40) || "Other" : relationshipLabel(relationship),
       circle,
       relationship,
-      birthday: bday,
-      anniversary: anniv,
+      birthday: birthday || null,
+      anniversary: anniversary || null,
     };
     if (existing) updatePerson(existing.id, next);
     else addPerson(next);
@@ -136,13 +115,9 @@ export function PersonSheet() {
           ))}
         </div>
 
-        <div className="wish-form-row">
-          <Field label="Birthday" hint="2016-12-02, or 12-02">
-            <TextInput value={birthday} placeholder="Optional" inputMode="numeric" onChange={(event) => setBirthday(event.target.value)} />
-          </Field>
-          <Field label="Anniversary" hint="Optional">
-            <TextInput value={anniversary} placeholder="Optional" inputMode="numeric" onChange={(event) => setAnniversary(event.target.value)} />
-          </Field>
+        <div className="date-pair">
+          <DateField label="Birthday" mode="optional-year" value={birthday} onChange={setBirthday} hint="Year is optional" />
+          <DateField label="Anniversary" mode="optional-year" value={anniversary} onChange={setAnniversary} hint="Year is optional" />
         </div>
 
         {error ? (

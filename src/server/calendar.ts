@@ -2,8 +2,9 @@
 import { randomBytes } from "node:crypto";
 import type { Db } from "./db.ts";
 import { error, json, type Handler, type PublicHandler } from "./http.ts";
-import { getLedger } from "./ledger.ts";
-import { addDays, monthDay, upcoming, type Upcoming } from "../lib/gifts/upcoming.ts";
+import { buildEvents, type CalEvent } from "./calendar-events.ts";
+import { householdRow } from "./ledger.ts";
+import { addDays, monthDay } from "../lib/gifts/upcoming.ts";
 import { getUser, type User } from "./users.ts";
 
 export const DEFAULT_REMIND_DAYS = 14;
@@ -62,20 +63,22 @@ function fold(line: string): string {
 }
 
 const compact = (iso: string) => iso.replaceAll("-", "");
+const safeUid = (id: string) => id.replace(/[^A-Za-z0-9:_-]/g, "_");
+/** A timed event is written as the calendar page shows it: "YYYY-MM-DDTHH:MM:SS", no zone, so it lands at the same wall-clock time. */
+const compactTime = (local: string) => local.replaceAll("-", "").replaceAll(":", "").slice(0, 15);
+/** The same thing on every date it repeats: "birthday:p1:2027-03-02" and "birthday:p1:2028-03-02" share "birthday:p1". */
+const seriesOf = (id: string) => id.replace(/:\d{4}-\d{2}-\d{2}$/, "");
 
+/**
+ * The feed is what the Calendar page shows (buildEvents), for the next year: birthdays, anniversaries and yearly occasions
+ * (each one yearly-repeating, plus "Start shopping" reminders), gift deadlines, Secret Santa dates and your own events
+ * (yearly ones repeat). Events imported from other calendars are left out: they came from there. Surprise gifts planned
+ * for the person whose feed this is are never in it, because buildEvents reads the ledger the way that person sees it.
+ */
 export function buildCalendar(db: Db, user: User, now = new Date()): string {
-  const ctx = { db, hid: user.householdId, me: user.personId };
-  const ledger = getLedger(ctx);
   const prefs = getPrefs(db, user.id);
   const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
-  const events = upcoming({
-    people: ledger.people,
-    gifts: ledger.gifts,
-    occasionDates: ledger.occasionDates,
-    mePersonId: user.personId,
-    today,
-    days: 366,
-  });
+  const events = buildEvents(db, user, { from: today, to: addDays(today, 366) }, today).filter((e) => e.source !== "external");
   const stamp = now.toISOString().replace(/[-:]/g, "").replace(/\.\d+/, "");
   const lines = [
     "BEGIN:VCALENDAR",
@@ -83,37 +86,63 @@ export function buildCalendar(db: Db, user: User, now = new Date()): string {
     "PRODID:-//Ribbon//Gift tracker//EN",
     "CALSCALE:GREGORIAN",
     "METHOD:PUBLISH",
-    `X-WR-CALNAME:${escapeText(`Ribbon · ${ledger.householdName}`)}`,
+    `X-WR-CALNAME:${escapeText(`Ribbon · ${householdRow(db, user.householdId)?.name ?? "Our household"}`)}`,
     "REFRESH-INTERVAL;VALUE=DURATION:PT12H",
     "X-PUBLISHED-TTL:PT12H",
   ];
-  const vevent = (uid: string, date: string, summary: string, description: string, yearly: boolean) => {
-    const parts = monthDay(date)!;
+  const vevent = (e: { uid: string; start: string; end: string; allDay: boolean; summary: string; description: string; yearly: boolean; busy?: boolean }) => {
+    const parts = monthDay(e.start.slice(0, 10))!;
     lines.push(
       "BEGIN:VEVENT",
-      `UID:${uid}@${user.householdId}.ribbon`,
+      `UID:${e.uid}@${user.householdId}.ribbon`,
       `DTSTAMP:${stamp}`,
-      `DTSTART;VALUE=DATE:${compact(date)}`,
-      `DTEND;VALUE=DATE:${compact(addDays(date, 1))}`,
-      ...(yearly ? [`RRULE:FREQ=YEARLY${parts.month === 2 && parts.day === 29 ? ";BYMONTH=2;BYMONTHDAY=29" : ""}`] : []),
-      `SUMMARY:${escapeText(summary)}`,
-      ...(description ? [`DESCRIPTION:${escapeText(description)}`] : []),
-      "TRANSP:TRANSPARENT",
+      e.allDay ? `DTSTART;VALUE=DATE:${compact(e.start)}` : `DTSTART:${compactTime(e.start)}`,
+      e.allDay ? `DTEND;VALUE=DATE:${compact(e.end)}` : `DTEND:${compactTime(e.end)}`,
+      ...(e.yearly ? [`RRULE:FREQ=YEARLY${parts.month === 2 && parts.day === 29 ? ";BYMONTH=2;BYMONTHDAY=29" : ""}`] : []),
+      `SUMMARY:${escapeText(e.summary)}`,
+      ...(e.description ? [`DESCRIPTION:${escapeText(e.description)}`] : []),
+      `TRANSP:${e.busy ? "OPAQUE" : "TRANSPARENT"}`,
       "END:VEVENT",
     );
   };
-  const describe = (event: Upcoming) => {
+  const describe = (event: CalEvent) => {
     const bits: string[] = [];
-    if (event.turning) bits.push(event.kind === "birthday" ? `Turning ${event.turning}` : `${event.turning} years`);
-    if (event.toBuy.length > 0) bits.push(`Still to buy for: ${event.toBuy.map((t) => t.name).join(", ")}`);
-    else if (event.covered > 0) bits.push("Everything is bought");
+    if (event.turning) bits.push(event.source === "birthday" ? `Turning ${event.turning}` : `${event.turning} years`);
+    if (event.note) bits.push(event.note);
+    if (event.toBuy && event.toBuy.length > 0) bits.push(`Still to buy for: ${event.toBuy.map((t) => t.name).join(", ")}`);
+    else if (event.covered) bits.push("Everything is bought");
     return bits.join("\n");
   };
+  const seen = new Set<string>();
   for (const event of events) {
-    const label = event.kind === "occasion" ? event.title : event.title;
-    vevent(event.key.replace(/[^A-Za-z0-9:_-]/g, "_"), event.date, `🎁 ${label}`, describe(event), true);
-    if (prefs.remind_days > 0 && event.toBuy.length > 0) {
-      vevent(`shop-${event.key.replace(/[^A-Za-z0-9:_-]/g, "_")}`, addDays(event.date, -prefs.remind_days), `Start shopping: ${label}`, `${label} is in ${prefs.remind_days} days.\n${describe(event)}`, true);
+    const yearly = event.source === "birthday" || event.source === "anniversary" || event.source === "occasion" || (event.source === "manual" && event.yearly === true);
+    const series = yearly ? seriesOf(event.id) : event.id;
+    // A year and a day can hold the same date twice; a repeating event is written once, from its first date.
+    if (seen.has(series)) continue;
+    seen.add(series);
+    const gift = event.source === "birthday" || event.source === "anniversary" || event.source === "occasion";
+    const summary = gift ? `🎁 ${event.title}` : event.source === "gift" ? `🎁 ${event.title}` : event.source === "santa" ? `🎅 ${event.title}` : event.title;
+    vevent({
+      uid: safeUid(series),
+      start: event.start,
+      end: event.end,
+      allDay: event.allDay,
+      summary,
+      description: event.source === "manual" ? event.note ?? "" : describe(event),
+      yearly,
+      busy: event.source === "manual" && !event.allDay,
+    });
+    if (gift && prefs.remind_days > 0 && event.toBuy && event.toBuy.length > 0) {
+      const label = event.title;
+      vevent({
+        uid: `shop-${safeUid(series)}`,
+        start: addDays(event.start, -prefs.remind_days),
+        end: addDays(event.start, 1 - prefs.remind_days),
+        allDay: true,
+        summary: `Start shopping: ${label}`,
+        description: `${label} is in ${prefs.remind_days} days.\n${describe(event)}`,
+        yearly: true,
+      });
     }
   }
   lines.push("END:VCALENDAR");

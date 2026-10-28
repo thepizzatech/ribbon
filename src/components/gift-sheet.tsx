@@ -1,6 +1,6 @@
 import { ChevronDown } from "lucide-react";
 import { useEffect, useState } from "react";
-import { Button, Field, Sheet, Switch, TextArea, TextInput } from "@/components/ui";
+import { Button, DateField, Field, Sheet, Switch, TextArea, TextInput } from "@/components/ui";
 import { useOverlay } from "@/components/overlay";
 import { statusLabel, todayISO, type Direction, type Gift, type GiftStatus } from "@/lib/gifts/model";
 import { useLedger } from "@/lib/gifts/store";
@@ -267,13 +267,7 @@ export function GiftSheet() {
         </Field>
 
         <div className="grid grid-cols-2 gap-3">
-          <Field label="Date">
-            <TextInput
-              type="date"
-              value={draft.date}
-              onChange={(event) => setDraft((current) => ({ ...current, date: event.target.value }))}
-            />
-          </Field>
+          <DateField label="Date" required value={draft.date} onChange={(date) => setDraft((current) => ({ ...current, date }))} />
           <Field label="Amount" hint="Optional">
             <TextInput
               inputMode="decimal"

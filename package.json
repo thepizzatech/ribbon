@@ -89,7 +89,7 @@
     "prettier": "^3.4.0",
     "typescript-eslint": "^8.56.1"
   },
-  "version": "0.4.0-dev.3",
+  "version": "0.4.0-dev.4",
   "engines": {
     "node": ">=22.13"
   }

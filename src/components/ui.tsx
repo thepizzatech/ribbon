@@ -2,7 +2,10 @@ import * as Dialog from "@radix-ui/react-dialog";
 import { X } from "lucide-react";
 import { useRef } from "react";
 import type { ButtonHTMLAttributes, InputHTMLAttributes, ReactNode, TextareaHTMLAttributes } from "react";
+import { datePickerIsOpen } from "@/lib/date-picker-state";
 import { cn } from "@/lib/utils";
+
+export { DateField } from "@/components/date-field";
 
 type Variant = "primary" | "secondary" | "ghost" | "danger";
 
@@ -135,6 +138,10 @@ export function Sheet({
         <Dialog.Overlay className="sheet-overlay" />
         <Dialog.Content
           className="sheet-panel"
+          // A calendar open inside the sheet takes the first Escape; the sheet stays.
+          onEscapeKeyDown={(event) => {
+            if (datePickerIsOpen()) event.preventDefault();
+          }}
           onCloseAutoFocus={(event) => {
             const target = opener.current;
             opener.current = null;

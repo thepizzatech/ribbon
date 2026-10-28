@@ -109,7 +109,7 @@
 .install-hint { display: flex; flex-direction: column; gap: 8px; }
 .person-link { min-height: 34px !important; max-width: 9.5rem; padding: 0 8px; font-size: 0.8125rem; }
 .user-row { flex-wrap: wrap; }
-.occasion-row .occ-date { max-width: 5.5rem; text-align: center; }
+
 .check { display: flex; align-items: flex-start; gap: 8px; font-size: 0.875rem; }
 .check input { margin-top: 3px; accent-color: var(--color-primary); }
 .csv-map { display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr)); }

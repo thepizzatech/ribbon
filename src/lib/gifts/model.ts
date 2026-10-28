@@ -92,6 +92,16 @@ export function cleanMonthDay(value: unknown): string | null {
   return text;
 }
 
+/** A real calendar day written "YYYY-MM-DD" (2026-02-30 and 2026-13-45 are not). Years 1900 to 2200, like the CSV import. */
+export function isIsoDate(value: unknown): value is string {
+  if (typeof value !== "string") return false;
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+  if (!m) return false;
+  const [y, mo, d] = [Number(m[1]), Number(m[2]), Number(m[3])];
+  const date = new Date(Date.UTC(y, mo - 1, d));
+  return y >= 1900 && y <= 2200 && date.getUTCFullYear() === y && date.getUTCMonth() === mo - 1 && date.getUTCDate() === d;
+}
+
 /** "MM-DD" for a yearly occasion date. */
 export function cleanOccasionDate(value: unknown): string | null {
   if (typeof value !== "string") return null;

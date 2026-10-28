@@ -11,6 +11,7 @@ import { onSettled, pendingChanges } from "@/lib/gifts/sync";
 
 const SESSION_KEY = ["session"] as const;
 const LEDGER_KEY = ["ledger"] as const;
+const CALENDAR_KEY = ["calendar"] as const;
 
 function Centered({ children }: { children: ReactNode }) {
   return (
@@ -68,6 +69,8 @@ export function LedgerGate({ children }: { children: ReactNode }) {
     onSettled((failure) => {
       if (failure) useLedger.setState({ syncError: failure });
       void queryClient.invalidateQueries({ queryKey: LEDGER_KEY });
+      // Birthdays, anniversaries, occasion dates and gift deadlines are drawn from the ledger: refresh the Calendar and the sidebar summary.
+      void queryClient.invalidateQueries({ queryKey: CALENDAR_KEY });
     });
     return () => onSettled(null);
   }, [queryClient]);
@@ -96,6 +99,11 @@ export function LedgerGate({ children }: { children: ReactNode }) {
     }
     setOffer(local);
   }, [firstLoad, importResolved, serverHasRealData]);
+
+  // Any other way the ledger changes (CSV import, restoring a backup, a shared wishlist) also moves dates on the Calendar.
+  useEffect(() => {
+    if (ledger.data) void queryClient.invalidateQueries({ queryKey: CALENDAR_KEY });
+  }, [ledger.data, queryClient]);
 
   // Mirror the server's copy into the store, unless local changes are still on their way up.
   useEffect(() => {

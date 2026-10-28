@@ -62,6 +62,15 @@ describe("stylesheets", () => {
     for (const file of files) assert.doesNotMatch(readFileSync(new URL(file, dir), "utf8"), /\.page:has\(/);
   });
 
+  test("the date picker has 44px touch targets and its own styles (no react-day-picker stylesheet)", () => {
+    const css = readFileSync(new URL("datepicker.css", dir), "utf8");
+    const coarse = css.slice(css.indexOf("@media (pointer: coarse)"));
+    assert.match(coarse, /\.dp-day-btn\s*\{[^}]*min-height:\s*44px/);
+    assert.match(coarse, /\.dp-trigger\s*\{[^}]*height:\s*44px/);
+    const field = readFileSync(new URL("../components/date-picker-panel.tsx", import.meta.url), "utf8");
+    assert.doesNotMatch(field, /react-day-picker\/(dist\/)?style/);
+  });
+
   test("the Calendar uses the same page heading as the other pages", () => {
     const cal = readFileSync(new URL("../components/pages/calendar.tsx", import.meta.url), "utf8");
     assert.match(cal, /<h1 className="page-title">Calendar<\/h1>/);
